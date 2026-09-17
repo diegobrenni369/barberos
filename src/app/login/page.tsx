@@ -1,0 +1,3 @@
+import Link from "next/link";
+import { LoginForm } from "@/components/auth/login-form";
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ registered?: string }> }) { const { registered } = await searchParams; return <main className="grid min-h-screen place-items-center bg-slate-100 p-6"><section className="w-full max-w-md rounded-xl bg-white p-7 shadow-sm"><h1 className="text-2xl font-bold">Ingresa a BarberOS</h1>{registered && <p className="mt-4 rounded-md bg-emerald-50 p-3 text-sm text-emerald-700">{registered}</p>}<div className="mt-6"><LoginForm /></div><p className="mt-5 text-sm text-slate-600">¿Aún no tienes cuenta? <Link className="font-medium text-slate-900 underline" href="/register">Regístrate</Link></p></section></main>; }
