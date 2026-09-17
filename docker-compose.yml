@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: barberos-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: barberos
+      POSTGRES_PASSWORD: barberos
+      POSTGRES_DB: barberos
+    ports:
+      - "5432:5432"
+    volumes:
+      - barberos_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  barberos_postgres_data:

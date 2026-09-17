@@ -2,6 +2,18 @@ import { z } from "zod";
 
 const optionalText = z.string().trim().max(120).optional().or(z.literal(""));
 
+const ianaTimezone = z.string().trim().refine(
+  (timezone) => {
+    try {
+      Intl.DateTimeFormat(undefined, { timeZone: timezone });
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  "Ingresa una zona horaria IANA válida",
+);
+
 export const registerSchema = z.object({
   name: z.string().trim().min(2, "Ingresa tu nombre").max(80),
   email: z.email("Ingresa un correo válido").toLowerCase(),
@@ -19,6 +31,6 @@ export const barbershopSchema = z.object({
   phone: optionalText,
   email: z.email("Ingresa un correo válido").optional().or(z.literal("")),
   address: optionalText,
-  timezone: z.string().min(1),
-  currency: z.string().length(3),
+  timezone: ianaTimezone,
+  currency: z.literal("CLP", "La moneda soportada actualmente es CLP"),
 });
