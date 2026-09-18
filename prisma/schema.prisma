@@ -37,6 +37,22 @@ model Barbershop {
   updatedAt   DateTime               @updatedAt
   memberships BarbershopMembership[]
   barbers     Barber[]
+  services    Service[]
+}
+
+model Service {
+  id              String      @id @default(cuid())
+  barbershopId    String
+  name            String
+  description     String?
+  durationMinutes Int
+  price           Decimal     @db.Decimal(12, 2)
+  isActive        Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  barbershop      Barbershop  @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+
+  @@index([barbershopId])
 }
 
 model BarbershopMembership {

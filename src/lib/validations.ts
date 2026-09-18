@@ -34,3 +34,20 @@ export const barbershopSchema = z.object({
   timezone: ianaTimezone,
   currency: z.literal("CLP", "La moneda soportada actualmente es CLP"),
 });
+
+const optionalContact = z.string().trim().max(120).optional().or(z.literal(""));
+export const barberSchema = z.object({
+  name: z.string().trim().min(2, "Ingresa el nombre").max(100),
+  phone: optionalContact,
+  email: z.email("Ingresa un correo válido").optional().or(z.literal("")),
+  commissionRate: z.coerce.number().min(0, "La comisión no puede ser negativa").max(100, "La comisión no puede superar 100").default(0),
+  isActive: z.coerce.boolean().default(true),
+});
+
+export const serviceSchema = z.object({
+  name: z.string().trim().min(2, "Ingresa el nombre").max(100),
+  description: z.string().trim().max(500).optional().or(z.literal("")),
+  durationMinutes: z.coerce.number().int("La duración debe ser un número entero").positive("La duración debe ser mayor a cero"),
+  price: z.coerce.number().finite("Ingresa un precio válido").min(0, "El precio no puede ser negativo"),
+  isActive: z.coerce.boolean().default(true),
+});

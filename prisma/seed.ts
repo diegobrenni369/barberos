@@ -25,6 +25,14 @@ async function main() {
     update: {},
     create: { id: "seed-diego", barbershopId: barbershop.id, name: "Diego" },
   });
+  await Promise.all([
+    { name: "Corte clásico", durationMinutes: 45, price: 12000 },
+    { name: "Corte y barba", durationMinutes: 60, price: 18000 },
+    { name: "Perfilado de barba", durationMinutes: 30, price: 9000 },
+  ].map((service) => prisma.service.upsert({
+    where: { id: `seed-service-${service.durationMinutes}` }, update: {},
+    create: { id: `seed-service-${service.durationMinutes}`, barbershopId: barbershop.id, ...service },
+  })));
 }
 
 main().finally(() => prisma.$disconnect());
