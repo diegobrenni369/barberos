@@ -11,10 +11,10 @@ function fail(message: string): never { redirect(`/services?error=${encodeURICom
 
 export async function createService(formData: FormData) {
   const membership = await requireRole(MembershipRole.OWNER); const parsed = serviceSchema.safeParse(Object.fromEntries(formData)); if (!parsed.success) fail(parsed.error.issues[0].message); const data = parsed.data;
-  await prisma.service.create({ data: { name: data.name, description: data.description || null, durationMinutes: data.durationMinutes, price: new Prisma.Decimal(data.price), isActive: data.isActive, barbershopId: membership.barbershopId } }); revalidatePath("/services");
+  await prisma.service.create({ data: { name: data.name, description: data.description || null, durationMinutes: data.durationMinutes, price: new Prisma.Decimal(data.price), isActive: data.isActive, barbershopId: membership.barbershopId } }); revalidatePath("/services"); redirect("/services");
 }
 export async function updateService(formData: FormData) {
   const membership = await requireRole(MembershipRole.OWNER); const id = String(formData.get("id")); const parsed = serviceSchema.safeParse(Object.fromEntries(formData)); if (!parsed.success) fail(parsed.error.issues[0].message); const data = parsed.data;
-  const result = await prisma.service.updateMany({ where: { id, barbershopId: membership.barbershopId }, data: { name: data.name, description: data.description || null, durationMinutes: data.durationMinutes, price: new Prisma.Decimal(data.price), isActive: data.isActive } }); if (!result.count) fail("Servicio no encontrado"); revalidatePath("/services");
+  const result = await prisma.service.updateMany({ where: { id, barbershopId: membership.barbershopId }, data: { name: data.name, description: data.description || null, durationMinutes: data.durationMinutes, price: new Prisma.Decimal(data.price), isActive: data.isActive } }); if (!result.count) fail("Servicio no encontrado"); revalidatePath("/services"); redirect("/services");
 }
 export async function toggleService(formData: FormData) { const membership = await requireRole(MembershipRole.OWNER); await prisma.service.updateMany({ where: { id: String(formData.get("id")), barbershopId: membership.barbershopId }, data: { isActive: formData.get("isActive") === "true" } }); revalidatePath("/services"); }
