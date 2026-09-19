@@ -51,3 +51,11 @@ export const serviceSchema = z.object({
   price: z.coerce.number().finite("Ingresa un precio válido").min(0, "El precio no puede ser negativo"),
   isActive: z.coerce.boolean().default(true),
 });
+
+export const customerSchema = z.object({
+  name: z.string().trim().min(2, "Ingresa el nombre del cliente").max(100),
+  phone: optionalContact,
+  email: z.email("Ingresa un correo válido").optional().or(z.literal("")),
+  notes: z.string().trim().max(1000).optional().or(z.literal("")),
+  isActive: z.coerce.boolean().default(true),
+});
