@@ -4,12 +4,13 @@ import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import { CalendarDays, ChevronsUpDown, LayoutDashboard, LogOut, Scissors, Settings, Sparkles, Users, Wrench } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarRail } from "@/components/ui/sidebar";
 
-const groups = [
-  { label: "Principal", items: [{ title: "Dashboard", url: "/dashboard", icon: LayoutDashboard }, { title: "Agenda", url: "#", icon: CalendarDays, disabled: true }] },
+const groups: { label: string; items: { title: string; url: string; icon: LucideIcon; disabled?: boolean }[] }[] = [
+  { label: "Principal", items: [{ title: "Dashboard", url: "/dashboard", icon: LayoutDashboard }, { title: "Agenda", url: "/agenda", icon: CalendarDays }] },
   { label: "Gestión", items: [{ title: "Clientes", url: "/customers", icon: Users }, { title: "Barberos", url: "/barbers", icon: Scissors }, { title: "Servicios", url: "/services", icon: Wrench }] },
   { label: "Administración", items: [{ title: "Configuración", url: "/settings", icon: Settings }] },
 ];
