@@ -59,3 +59,14 @@ export const customerSchema = z.object({
   notes: z.string().trim().max(1000).optional().or(z.literal("")),
   isActive: z.coerce.boolean().default(true),
 });
+
+export const appointmentSchema = z.object({
+  id: z.string().cuid().optional().or(z.literal("")),
+  customerId: z.string().cuid("Selecciona un cliente"),
+  barberId: z.string().cuid("Selecciona un barbero"),
+  serviceId: z.string().cuid("Selecciona un servicio"),
+  date: z.iso.date("Selecciona una fecha válida"),
+  time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Selecciona una hora válida"),
+  notes: z.string().trim().max(1000).optional().or(z.literal("")),
+  status: z.enum(["SCHEDULED", "CONFIRMED", "COMPLETED", "CANCELLED", "NO_SHOW"]).default("SCHEDULED"),
+});

@@ -12,62 +12,73 @@ enum MembershipRole {
   BARBER
 }
 
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
 model User {
-  id          String                 @id @default(cuid())
-  name        String
-  email       String                 @unique
-  passwordHash String
-  createdAt   DateTime               @default(now())
-  updatedAt   DateTime               @updatedAt
-  memberships BarbershopMembership[]
+  id             String                 @id @default(cuid())
+  name           String
+  email          String                 @unique
+  passwordHash   String
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  memberships    BarbershopMembership[]
   barberProfiles Barber[]
 }
 
 model Barbershop {
-  id          String                 @id @default(cuid())
-  name        String
-  slug        String                 @unique
-  phone       String?
-  email       String?
-  address     String?
-  timezone    String                 @default("America/Santiago")
-  currency    String                 @default("CLP")
-  isActive    Boolean                @default(true)
-  createdAt   DateTime               @default(now())
-  updatedAt   DateTime               @updatedAt
-  memberships BarbershopMembership[]
-  barbers     Barber[]
-  services    Service[]
-  customers   Customer[]
+  id           String                 @id @default(cuid())
+  name         String
+  slug         String                 @unique
+  phone        String?
+  email        String?
+  address      String?
+  timezone     String                 @default("America/Santiago")
+  currency     String                 @default("CLP")
+  isActive     Boolean                @default(true)
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+  memberships  BarbershopMembership[]
+  barbers      Barber[]
+  services     Service[]
+  customers    Customer[]
+  appointments Appointment[]
 }
 
 model Customer {
-  id          String      @id @default(cuid())
+  id           String        @id @default(cuid())
   barbershopId String
-  name        String
-  phone       String?
-  email       String?
-  notes       String?
-  isActive    Boolean     @default(true)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  barbershop  Barbershop  @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  name         String
+  phone        String?
+  email        String?
+  notes        String?
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  barbershop   Barbershop    @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
 
   @@index([barbershopId])
   @@index([barbershopId, name])
 }
 
 model Service {
-  id              String      @id @default(cuid())
+  id              String        @id @default(cuid())
   barbershopId    String
   name            String
   description     String?
   durationMinutes Int
-  price           Decimal     @db.Decimal(12, 2)
-  isActive        Boolean     @default(true)
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  barbershop      Barbershop  @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  price           Decimal       @db.Decimal(12, 2)
+  isActive        Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  barbershop      Barbershop    @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  appointments    Appointment[]
 
   @@index([barbershopId])
 }
@@ -87,19 +98,43 @@ model BarbershopMembership {
 }
 
 model Barber {
-  id             String      @id @default(cuid())
+  id             String        @id @default(cuid())
   barbershopId   String
   userId         String?
   name           String
   phone          String?
   email          String?
-  commissionRate Decimal     @default(0) @db.Decimal(5, 2)
-  isActive       Boolean     @default(true)
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-  barbershop     Barbershop  @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
-  user           User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  commissionRate Decimal       @default(0) @db.Decimal(5, 2)
+  isActive       Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  barbershop     Barbershop    @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  appointments   Appointment[]
 
   @@index([barbershopId])
   @@index([userId])
+}
+
+model Appointment {
+  id           String            @id @default(cuid())
+  barbershopId String
+  barberId     String
+  customerId   String
+  serviceId    String
+  startsAt     DateTime
+  endsAt       DateTime
+  status       AppointmentStatus @default(SCHEDULED)
+  price        Decimal           @db.Decimal(12, 2)
+  notes        String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  barbershop   Barbershop        @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  barber       Barber            @relation(fields: [barberId], references: [id], onDelete: Restrict)
+  customer     Customer          @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  service      Service           @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  @@index([barbershopId, startsAt])
+  @@index([barbershopId, barberId, startsAt])
+  @@index([barberId, startsAt, endsAt])
 }
