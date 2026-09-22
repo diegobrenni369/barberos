@@ -44,9 +44,12 @@ export type AppointmentData = {
   customerName: string;
   serviceName: string;
   endTime: string;
+  price: string;
+  updatedAt: string;
+  durationMinutes: number;
 };
 
-const statuses = [
+export const statuses = [
   { value: "SCHEDULED", label: "Agendada" },
   { value: "CONFIRMED", label: "Confirmada" },
   { value: "COMPLETED", label: "Completada" },

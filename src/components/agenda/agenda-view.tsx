@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   AGENDA_PIXELS_PER_MINUTE,
   AGENDA_SLOT_MINUTES,
@@ -8,7 +8,8 @@ import {
 } from "@/lib/agenda";
 import { AgendaToolbar } from "@/components/agenda/agenda-toolbar";
 import { AvailabilityInterval, AvailabilityLayer, isSlotAvailable } from "@/components/agenda/availability-layer";
-import { AppointmentCard } from "@/components/agenda/appointment-card";
+import { AppointmentInteraction } from "@/components/agenda/appointment-interaction";
+import { AppointmentDragProvider, AppointmentDropSlot } from "@/components/agenda/appointment-drag";
 import { BarberBlock, BarberBlockData } from "@/components/agenda/barber-block";
 import { BarberBreak, BarberBreakData } from "@/components/agenda/barber-break";
 import { BarberBlockDialog } from "@/components/agenda/barber-block-dialog";
@@ -50,6 +51,10 @@ export function AgendaView({
   reasons,
   startMinute,
   endMinute,
+  allBarbers = barbers,
+  panelControls,
+  onAppointmentSelect,
+  suppressAppointmentHover = false,
 }: {
   date: string;
   today: string;
@@ -65,6 +70,10 @@ export function AgendaView({
   reasons: AgendaOption[];
   startMinute: number;
   endMinute: number;
+  allBarbers?: AgendaOption[];
+  panelControls?: ReactNode;
+  suppressAppointmentHover?: boolean;
+  onAppointmentSelect?: (appointment: AppointmentData, onEdit: () => void) => void;
 }) {
   const totalMinutes = endMinute - startMinute;
   const gridHeight = totalMinutes * AGENDA_PIXELS_PER_MINUTE;
@@ -83,11 +92,12 @@ export function AgendaView({
   const columnTemplate = `${HOUR_COLUMN_WIDTH}px repeat(${barbers.length}, minmax(${BARBER_MIN_WIDTH}px, 1fr))`;
 
   return (
+    <AppointmentDragProvider date={date} appointments={appointments}>
     <div className="space-y-4">
-      <AgendaToolbar date={date} today={today} onNew={() => openNew()} />
+      <AgendaToolbar date={date} today={today} onNew={() => openNew()} panelControls={panelControls} />
       {barbers.length === 0 ? (
         <div className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">
-          Agrega al menos un barbero activo para utilizar la agenda.
+          {allBarbers.length === 0 ? "Agrega al menos un barbero activo para utilizar la agenda." : "Selecciona un barbero en el panel para mostrar su agenda."}
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border bg-card shadow-xs">
@@ -170,6 +180,7 @@ export function AgendaView({
                   className="relative min-w-0 border-r border-border/60 last:border-r-0"
                 >
                   <AvailabilityLayer intervals={availability.find((item) => item.barberId === barber.id)?.intervals ?? []} start={startMinute} end={endMinute} />
+                  {slots.slice(0, -1).map(minutes => <AppointmentDropSlot key={`drop-${minutes}`} barberId={barber.id} minute={minutes} gridStart={startMinute} gridEnd={endMinute} intervals={availability.find(item => item.barberId === barber.id)?.intervals ?? []} breaks={recurringBreaks} blocks={blocks} appointments={appointments} />)}
                   {slots.slice(0, -1).filter((minutes) => {
                     const duration = Math.min(AGENDA_SLOT_MINUTES, endMinute - minutes);
                     const overlaps = (start: number, end: number) => start < minutes + duration && end > minutes;
@@ -194,16 +205,14 @@ export function AgendaView({
                   {appointments
                     .filter((item) => item.barberId === barber.id)
                     .map((item) => (
-                      <AppointmentCard
+                      <AppointmentInteraction
+                        suppressHover={suppressAppointmentHover}
                         key={item.id}
                         appointment={item}
+                        barberName={barber.name}
                         gridStartMinute={startMinute}
                         onClick={() =>
-                          setDialog({
-                            appointment: item,
-                            time: item.time,
-                            barberId: item.barberId,
-                          })
+                          onAppointmentSelect?.(item, () => setDialog({ appointment: item, time: item.time, barberId: item.barberId }))
                         }
                       />
                     ))}
@@ -237,13 +246,14 @@ export function AgendaView({
           }}
           appointment={dialog.appointment}
           defaults={{ date, time: dialog.time, barberId: dialog.barberId }}
-          barbers={barbers}
+          barbers={allBarbers}
           customers={customers}
           services={services}
         />
       )}
-      {blockDialog && <BarberBlockDialog key={blockDialog.block?.id ?? `${blockDialog.barberId}-${blockDialog.time}`} open onOpenChange={(open) => { if (!open) setBlockDialog(null); }} block={blockDialog.block} defaults={{ barberId: blockDialog.barberId, date, startTime: blockDialog.time, endTime: formatTime(Math.min(toMinutes(blockDialog.time) + 30, endMinute)) }} barbers={barbers} reasons={reasons} />}
+      {blockDialog && <BarberBlockDialog key={blockDialog.block?.id ?? `${blockDialog.barberId}-${blockDialog.time}`} open onOpenChange={(open) => { if (!open) setBlockDialog(null); }} block={blockDialog.block} defaults={{ barberId: blockDialog.barberId, date, startTime: blockDialog.time, endTime: formatTime(Math.min(toMinutes(blockDialog.time) + 30, endMinute)) }} barbers={allBarbers} reasons={reasons} />}
     </div>
+    </AppointmentDragProvider>
   );
 }
 

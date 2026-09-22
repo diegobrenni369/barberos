@@ -13,6 +13,9 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
+    "@dnd-kit/collision": "^0.5.0",
+    "@dnd-kit/dom": "^0.5.0",
+    "@dnd-kit/react": "^0.5.0",
     "@hookform/resolvers": "^5.9.1",
     "@prisma/client": "^6.16.3",
     "bcryptjs": "^3.0.3",
@@ -24,6 +27,7 @@
     "next": "16.3.5",
     "next-auth": "^4.24.15",
     "react": "19.2.8",
+    "react-day-picker": "^10.0.1",
     "react-dom": "19.2.8",
     "react-hook-form": "^7.88.0",
     "shadcn": "^4.21.0",
