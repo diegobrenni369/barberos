@@ -20,6 +20,16 @@ enum AppointmentStatus {
   NO_SHOW
 }
 
+enum DayOfWeek {
+  SUNDAY
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+}
+
 model User {
   id             String                 @id @default(cuid())
   name           String
@@ -32,22 +42,27 @@ model User {
 }
 
 model Barbershop {
-  id           String                 @id @default(cuid())
-  name         String
-  slug         String                 @unique
-  phone        String?
-  email        String?
-  address      String?
-  timezone     String                 @default("America/Santiago")
-  currency     String                 @default("CLP")
-  isActive     Boolean                @default(true)
-  createdAt    DateTime               @default(now())
-  updatedAt    DateTime               @updatedAt
-  memberships  BarbershopMembership[]
-  barbers      Barber[]
-  services     Service[]
-  customers    Customer[]
-  appointments Appointment[]
+  id             String                   @id @default(cuid())
+  name           String
+  slug           String                   @unique
+  phone          String?
+  email          String?
+  address        String?
+  timezone       String                   @default("America/Santiago")
+  currency       String                   @default("CLP")
+  isActive       Boolean                  @default(true)
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  memberships    BarbershopMembership[]
+  barbers        Barber[]
+  services       Service[]
+  customers      Customer[]
+  appointments   Appointment[]
+  availabilities BarberAvailability[]
+  barberBreaks   BarberBreak[]
+  barberBlocks   BarberBlock[]
+  businessHours  BarbershopBusinessHour[]
+  blockReasons   BlockReason[]
 }
 
 model Customer {
@@ -98,22 +113,107 @@ model BarbershopMembership {
 }
 
 model Barber {
-  id             String        @id @default(cuid())
+  id             String               @id @default(cuid())
   barbershopId   String
   userId         String?
   name           String
   phone          String?
   email          String?
-  commissionRate Decimal       @default(0) @db.Decimal(5, 2)
-  isActive       Boolean       @default(true)
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  barbershop     Barbershop    @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
-  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  commissionRate Decimal              @default(0) @db.Decimal(5, 2)
+  isActive       Boolean              @default(true)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  barbershop     Barbershop           @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  user           User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
   appointments   Appointment[]
+  availabilities BarberAvailability[]
+  breaks         BarberBreak[]
+  blocks         BarberBlock[]
 
   @@index([barbershopId])
   @@index([userId])
+}
+
+model BarberAvailability {
+  id           String     @id @default(cuid())
+  barbershopId String
+  barberId     String
+  dayOfWeek    DayOfWeek
+  startMinute  Int
+  endMinute    Int
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  barbershop   Barbershop @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  barber       Barber     @relation(fields: [barberId], references: [id], onDelete: Cascade)
+
+  @@index([barbershopId, barberId, dayOfWeek])
+  @@index([barberId, dayOfWeek, startMinute])
+}
+
+model BarberBlock {
+  id           String      @id @default(cuid())
+  barbershopId String
+  barberId     String
+  startsAt     DateTime
+  endsAt       DateTime
+  reasonId     String
+  note         String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  barbershop   Barbershop  @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  barber       Barber      @relation(fields: [barberId], references: [id], onDelete: Cascade)
+  reason       BlockReason @relation(fields: [reasonId], references: [id], onDelete: Restrict)
+
+  @@index([barbershopId, startsAt])
+  @@index([barbershopId, barberId, startsAt])
+  @@index([barberId, startsAt, endsAt])
+  @@index([reasonId])
+}
+
+model BarbershopBusinessHour {
+  id           String     @id @default(cuid())
+  barbershopId String
+  dayOfWeek    DayOfWeek
+  opensMinute  Int
+  closesMinute Int
+  isClosed     Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  barbershop   Barbershop @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+
+  @@unique([barbershopId, dayOfWeek])
+  @@index([barbershopId])
+}
+
+model BlockReason {
+  id           String        @id @default(cuid())
+  barbershopId String
+  name         String
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  barbershop   Barbershop    @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  blocks       BarberBlock[]
+
+  @@unique([barbershopId, name])
+  @@index([barbershopId, isActive])
+}
+
+model BarberBreak {
+  id           String     @id @default(cuid())
+  barbershopId String
+  barberId     String
+  dayOfWeek    DayOfWeek
+  startMinute  Int
+  endMinute    Int
+  label        String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  barbershop   Barbershop @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  barber       Barber     @relation(fields: [barberId], references: [id], onDelete: Cascade)
+
+  @@index([barbershopId, barberId, dayOfWeek])
+  @@index([barberId, dayOfWeek, startMinute])
 }
 
 model Appointment {

@@ -1,11 +1,12 @@
 "use server";
 
-import { MembershipRole, Prisma } from "@prisma/client";
+import { DayOfWeek, MembershipRole, Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAuth, requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { barbershopSchema } from "@/lib/validations";
+import { barbershopSchema, businessHoursSchema } from "@/lib/validations";
+import { timeToMinute } from "@/lib/barber-availability";
 
 function errorUrl(path: string, message: string) { return `${path}?error=${encodeURIComponent(message)}`; }
 const ONBOARDING_TRANSACTION_RETRIES = 3;
@@ -25,6 +26,8 @@ export async function createBarbershop(formData: FormData) {
         if (existingMembership) return false;
         const barbershop = await tx.barbershop.create({ data: { ...parsed.data, phone: parsed.data.phone || null, email: parsed.data.email || null, address: parsed.data.address || null } });
         await tx.barbershopMembership.create({ data: { userId: user.id, barbershopId: barbershop.id, role: MembershipRole.OWNER } });
+        await tx.barbershopBusinessHour.createMany({ data: [DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY, DayOfWeek.SATURDAY, DayOfWeek.SUNDAY].map((dayOfWeek) => ({ barbershopId: barbershop.id, dayOfWeek, opensMinute: 480, closesMinute: 1200 })) });
+        await tx.blockReason.createMany({ data: ["Trámite personal", "Médico", "Capacitación", "Reunión", "Permiso", "Vacaciones", "Ausencia", "Otro"].map((name) => ({ barbershopId: barbershop.id, name })) });
         return true;
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
       if (!created) redirect("/dashboard");
@@ -37,6 +40,20 @@ export async function createBarbershop(formData: FormData) {
     }
   }
   redirect(errorUrl("/onboarding", "No pudimos crear la barbería. Intenta nuevamente."));
+}
+
+export async function saveBusinessHours(formData: FormData) {
+  const membership = await requireRole(MembershipRole.OWNER); let schedule: unknown;
+  try { schedule = JSON.parse(String(formData.get("schedule"))); } catch { redirect(errorUrl("/settings", "Horario inválido")); }
+  const parsed = businessHoursSchema.safeParse({ schedule });
+  if (!parsed.success) redirect(errorUrl("/settings", parsed.error.issues[0].message));
+  if (new Set(parsed.data.schedule.map((item) => item.dayOfWeek)).size !== 7) redirect(errorUrl("/settings", "El horario contiene días duplicados"));
+  const rows = parsed.data.schedule.map((item) => ({ barbershopId: membership.barbershopId, dayOfWeek: item.dayOfWeek, opensMinute: timeToMinute(item.opensAt), closesMinute: timeToMinute(item.closesAt), isClosed: item.isClosed }));
+  if (rows.some((item) => !item.isClosed && item.opensMinute >= item.closesMinute)) redirect(errorUrl("/settings", "La apertura debe ser anterior al cierre"));
+  const customAvailability = await prisma.barberAvailability.findMany({ where: { barbershopId: membership.barbershopId }, select: { dayOfWeek: true, startMinute: true, endMinute: true } });
+  if (customAvailability.some((item) => { const hours = rows.find((row) => row.dayOfWeek === item.dayOfWeek); return !hours || hours.isClosed || item.startMinute < hours.opensMinute || item.endMinute > hours.closesMinute; })) redirect(errorUrl("/settings", "Hay horarios de barberos fuera del nuevo horario de atención"));
+  await prisma.$transaction(async (tx) => { await tx.barbershopBusinessHour.deleteMany({ where: { barbershopId: membership.barbershopId } }); await tx.barbershopBusinessHour.createMany({ data: rows }); });
+  revalidatePath("/settings"); revalidatePath("/agenda"); redirect("/settings?success=Horario+guardado");
 }
 
 export async function updateBarbershop(formData: FormData) {

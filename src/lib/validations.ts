@@ -70,3 +70,43 @@ export const appointmentSchema = z.object({
   notes: z.string().trim().max(1000).optional().or(z.literal("")),
   status: z.enum(["SCHEDULED", "CONFIRMED", "COMPLETED", "CANCELLED", "NO_SHOW"]).default("SCHEDULED"),
 });
+
+const clockTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Ingresa una hora válida");
+export const weeklyAvailabilitySchema = z.object({
+  barberId: z.string().cuid("Barbero inválido"),
+  schedule: z.array(z.object({
+    dayOfWeek: z.enum(["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"]),
+    enabled: z.boolean(),
+    startTime: clockTime,
+    endTime: clockTime,
+    breaks: z.array(z.object({
+      startTime: clockTime,
+      endTime: clockTime,
+      label: z.string().trim().max(80, "La etiqueta es demasiado larga").optional().or(z.literal("")),
+    })).max(8, "Hay demasiados descansos para un día"),
+  })).length(7),
+});
+
+export const businessHoursSchema = z.object({
+  schedule: z.array(z.object({
+    dayOfWeek: z.enum(["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"]),
+    isClosed: z.boolean(),
+    opensAt: clockTime,
+    closesAt: clockTime,
+  })).length(7),
+});
+
+const barberBlockBaseSchema = z.object({
+  barberId: z.string().cuid("Selecciona un barbero"),
+  date: z.iso.date("Selecciona una fecha válida"),
+  startTime: clockTime,
+  endTime: clockTime,
+  allDay: z.string().optional().transform((value) => value === "true"),
+  reasonId: z.string().min(1, "Selecciona un motivo"),
+  note: z.string().trim().max(500, "La nota es demasiado larga").optional().or(z.literal("")),
+});
+
+export const createBarberBlockSchema = barberBlockBaseSchema;
+export const updateBarberBlockSchema = barberBlockBaseSchema.extend({
+  id: z.string().cuid("Bloqueo inválido"),
+});

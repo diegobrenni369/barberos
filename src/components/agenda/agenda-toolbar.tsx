@@ -18,7 +18,7 @@ export function AgendaToolbar({
 }: {
   date: string;
   today: string;
-  onNew: () => void;
+  onNew?: () => void;
 }) {
   const showCancelled = useSearchParams().get("cancelled") === "true";
   const suffix = showCancelled ? "&cancelled=true" : "";
@@ -52,6 +52,7 @@ export function AgendaToolbar({
         </Button>
         <form>
           <input
+            key={date}
             type="date"
             name="date"
             defaultValue={date}
@@ -85,7 +86,7 @@ export function AgendaToolbar({
         <Button variant="outline" disabled>
           Día
         </Button>
-        <Button onClick={onNew}>
+        <Button onClick={onNew} disabled={!onNew}>
           <Plus />
           Nueva reserva
         </Button>
