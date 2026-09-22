@@ -1,5 +1,3 @@
-export const AGENDA_START_HOUR = 8;
-export const AGENDA_END_HOUR = 20;
 export const AGENDA_SLOT_MINUTES = 30;
 export const AGENDA_PIXELS_PER_MINUTE = 1.6;
 export const AGENDA_TOP_GUTTER = 24;

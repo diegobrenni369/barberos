@@ -1,4 +1,4 @@
-import { PrismaClient, MembershipRole } from "@prisma/client";
+import { DayOfWeek, PrismaClient, MembershipRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -20,6 +20,14 @@ async function main() {
     update: { role: MembershipRole.OWNER },
     create: { userId: user.id, barbershopId: barbershop.id, role: MembershipRole.OWNER },
   });
+  await Promise.all(Object.values(DayOfWeek).map((dayOfWeek) => prisma.barbershopBusinessHour.upsert({
+    where: { barbershopId_dayOfWeek: { barbershopId: barbershop.id, dayOfWeek } },
+    update: {},
+    create: { barbershopId: barbershop.id, dayOfWeek, opensMinute: 480, closesMinute: 1200 },
+  })));
+  await Promise.all(["Trámite personal", "Médico", "Capacitación", "Reunión", "Permiso", "Vacaciones", "Ausencia", "Otro"].map((name) => prisma.blockReason.upsert({
+    where: { barbershopId_name: { barbershopId: barbershop.id, name } }, update: {}, create: { barbershopId: barbershop.id, name },
+  })));
   await prisma.barber.upsert({
     where: { id: "seed-diego" },
     update: {},
