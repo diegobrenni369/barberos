@@ -45,6 +45,7 @@ async function appointmentData(formData: FormData, allowStatusOnly = false) {
 
 export async function createAppointment(formData: FormData) {
   const { membership, data, service, startsAt, endsAt } = await appointmentData(formData);
+  if (data.status === "COMPLETED") fail(data.date, "Usa Cobrar para completar la atención y registrar su venta.");
   try {
     await prisma.$transaction(async (tx) => {
       await ensureBarberAvailable(tx, { barbershopId: membership.barbershopId, barberId: data.barberId, startsAt, endsAt, timezone: membership.barbershop.timezone });
@@ -69,8 +70,10 @@ export async function updateAppointment(formData: FormData) {
   if (!id) fail(data.date, "Reserva no encontrada");
   try {
     await prisma.$transaction(async (tx) => {
-      const current = await tx.appointment.findFirst({ where: { id, barbershopId: membership.barbershopId }, select: { id: true, updatedAt: true } });
+      const current = await tx.appointment.findFirst({ where: { id, barbershopId: membership.barbershopId }, select: { id: true, status: true, updatedAt: true, sale: { select: { id: true } } } });
       if (!current) throw new Error("APPOINTMENT_NOT_FOUND");
+      if (current.sale) throw new Error("APPOINTMENT_PAID");
+      if (data.status === "COMPLETED" && current.status !== "COMPLETED") throw new Error("CHECKOUT_REQUIRED");
       if (expectedUpdatedAt && current.updatedAt.getTime() !== expectedUpdatedAt.getTime()) throw new Error("APPOINTMENT_CHANGED");
       if (data.status !== "CANCELLED") {
         await ensureBarberAvailable(tx, { barbershopId: membership.barbershopId, barberId: data.barberId, startsAt, endsAt, timezone: membership.barbershop.timezone });
@@ -83,6 +86,8 @@ export async function updateAppointment(formData: FormData) {
   } catch (error) {
     if (error instanceof Error && error.message === "APPOINTMENT_NOT_FOUND") fail(data.date, "Reserva no encontrada");
     if (error instanceof Error && error.message === "APPOINTMENT_CHANGED") fail(data.date, "La reserva cambió. Actualiza la agenda e intenta nuevamente.");
+    if (error instanceof Error && error.message === "APPOINTMENT_PAID") fail(data.date, "La reserva ya tiene una venta registrada y no puede modificarse.");
+    if (error instanceof Error && error.message === "CHECKOUT_REQUIRED") fail(data.date, "Usa Cobrar para completar la atención y registrar su venta.");
     if (error instanceof Error && availabilityError(error)) fail(data.date, availabilityError(error)!);
     if (error instanceof Error && error.message === "BARBER_BREAK") fail(data.date, "El horario coincide con un descanso del barbero");
     if (error instanceof Error && error.message === "BARBER_BLOCKED") fail(data.date, "El barbero tiene un bloqueo en ese horario");
