@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 
 const optionalText = z.string().trim().max(120).optional().or(z.literal(""));
 
@@ -48,8 +49,22 @@ export const serviceSchema = z.object({
   name: z.string().trim().min(2, "Ingresa el nombre").max(100),
   description: z.string().trim().max(500).optional().or(z.literal("")),
   durationMinutes: z.coerce.number().int("La duración debe ser un número entero").positive("La duración debe ser mayor a cero"),
-  price: z.coerce.number().finite("Ingresa un precio válido").min(0, "El precio no puede ser negativo"),
-  isActive: z.coerce.boolean().default(true),
+  price: z.coerce.string().regex(/^\d{1,10}(\.\d{1,2})?$/, "Ingresa un precio válido"),
+  isActive: z.union([z.boolean(), z.enum(["true", "false"])]).default(true).transform(value => value === true || value === "true"),
+  isOnlineBookingEnabled: z.enum(["true", "false"]).default("false").transform(value => value === "true"),
+  onlinePaymentPolicy: z.enum(["NONE", "OPTIONAL", "FULL", "DEPOSIT"]).default("NONE"),
+  depositAmount: z.string().regex(/^\d{1,10}(\.\d{1,2})?$/, "Ingresa un abono válido").optional().or(z.literal("")),
+}).superRefine((data, ctx) => {
+  // Zod refinements may run after a regex issue; never pass invalid text to Decimal.
+  const moneyText = /^\d{1,10}(\.\d{1,2})?$/;
+  if (!moneyText.test(data.price) || (data.depositAmount && !moneyText.test(data.depositAmount))) return;
+  if (data.onlinePaymentPolicy === "DEPOSIT") {
+    if (!data.depositAmount || new Prisma.Decimal(data.depositAmount).lte(0) || new Prisma.Decimal(data.depositAmount).gt(data.price)) {
+      ctx.addIssue({ code: "custom", path: ["depositAmount"], message: "El abono debe ser mayor a cero y no superar el precio" });
+    }
+  } else if (data.depositAmount) {
+    ctx.addIssue({ code: "custom", path: ["depositAmount"], message: "El abono solo aplica a la política Solicitar abono" });
+  }
 });
 
 export const customerSchema = z.object({

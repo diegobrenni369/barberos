@@ -96,6 +96,18 @@ model Customer {
   @@index([barbershopId, name])
 }
 
+enum OnlinePaymentPolicy {
+  NONE
+  OPTIONAL
+  FULL
+  DEPOSIT
+}
+
+enum AppointmentSource {
+  INTERNAL
+  ONLINE
+}
+
 model Service {
   id              String        @id @default(cuid())
   barbershopId    String
@@ -103,6 +115,9 @@ model Service {
   description     String?
   durationMinutes Int
   price           Decimal       @db.Decimal(12, 2)
+  isOnlineBookingEnabled Boolean @default(false)
+  onlinePaymentPolicy OnlinePaymentPolicy @default(NONE)
+  depositAmount Decimal? @db.Decimal(12, 2)
   isActive        Boolean       @default(true)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -242,6 +257,7 @@ model Appointment {
   startsAt     DateTime
   endsAt       DateTime
   status       AppointmentStatus @default(SCHEDULED)
+  source       AppointmentSource @default(INTERNAL)
   price        Decimal           @db.Decimal(12, 2)
   notes        String?
   createdAt    DateTime          @default(now())
