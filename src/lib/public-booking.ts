@@ -26,7 +26,7 @@ async function loadBookingDay(db: Prisma.TransactionClient, input: PublicSlotInp
   const [businessHour, barbers] = await Promise.all([
     db.barbershopBusinessHour.findUnique({ where: { barbershopId_dayOfWeek: { barbershopId: shop.id, dayOfWeek } }, select: { opensMinute: true, closesMinute: true, isClosed: true } }),
     db.barber.findMany({
-      where: { barbershopId: shop.id, isActive: true, ...(input.barberId ? { id: input.barberId } : {}) }, orderBy: { id: "asc" },
+      where: { barbershopId: shop.id, isActive: true, barberServices: { some: { barbershopId: shop.id, serviceId: service.id } }, ...(input.barberId ? { id: input.barberId } : {}) }, orderBy: { id: "asc" },
       select: { id: true, name: true,
         availabilities: { where: { barbershopId: shop.id }, select: { dayOfWeek: true, startMinute: true, endMinute: true } },
         breaks: { where: { barbershopId: shop.id, dayOfWeek }, select: { startMinute: true, endMinute: true } },

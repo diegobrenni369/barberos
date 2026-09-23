@@ -39,7 +39,7 @@ async function main() {
     { name: "Perfilado de barba", durationMinutes: 30, price: 9000 },
   ].map((service) => prisma.service.upsert({
     where: { id: `seed-service-${service.durationMinutes}` }, update: {},
-    create: { id: `seed-service-${service.durationMinutes}`, barbershopId: barbershop.id, ...service },
+    create: { id: `seed-service-${service.durationMinutes}`, barbershopId: barbershop.id, ...service, barberServices: { create: { barber: { connect: { id: "seed-diego" } } } } },
   })));
 }
 

@@ -18,6 +18,6 @@ export function LoginForm() {
     <label className="block text-sm font-medium">Correo<input name="email" type="email" required className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" /></label>
     <label className="block text-sm font-medium">Contraseña<input name="password" type="password" required className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" /></label>
     {error && <p className="text-sm text-red-600">{error}</p>}
-    <Button className="w-full">Ingresar</Button>
+    <Button type="submit" className="w-full">Ingresar</Button>
   </form>;
 }

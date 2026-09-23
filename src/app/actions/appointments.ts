@@ -9,6 +9,7 @@ import { ensureBarberAvailable, ensureNoBarberBlock, ensureNoBarberBreak } from 
 import { prisma } from "@/lib/prisma";
 import { appointmentSchema } from "@/lib/validations";
 import { ensureNoOverlap } from "@/lib/appointment-overlap";
+import { ensureBarberService, BARBER_SERVICE_MESSAGE } from "@/lib/barber-service";
 
 function fail(date: string, message: string): never { redirect(`/agenda?date=${date}&error=${encodeURIComponent(message)}`); }
 function availabilityError(error: Error) {
@@ -40,7 +41,7 @@ async function appointmentData(formData: FormData, allowStatusOnly = false) {
   if (!service) fail(data.date, "El servicio no está disponible");
   const startsAt = current?.startsAt ?? zonedDateTimeToUtc(data.date, data.time, membership.barbershop.timezone);
   const endsAt = current?.endsAt ?? new Date(startsAt.getTime() + service.durationMinutes * 60_000);
-  return { membership, data, service: current ? { ...service, price: current.price } : service, startsAt, endsAt, expectedUpdatedAt: current?.updatedAt };
+  return { membership, data, service: current ? { ...service, price: current.price } : service, startsAt, endsAt, expectedUpdatedAt: current?.updatedAt, checkEligibility: !statusOnly || (current?.status === "CANCELLED" && data.status !== "CANCELLED") };
 }
 
 export async function createAppointment(formData: FormData) {
@@ -48,6 +49,7 @@ export async function createAppointment(formData: FormData) {
   if (data.status === "COMPLETED") fail(data.date, "Usa Cobrar para completar la atención y registrar su venta.");
   try {
     await prisma.$transaction(async (tx) => {
+      await ensureBarberService(tx, membership.barbershopId, data.barberId, data.serviceId);
       await ensureBarberAvailable(tx, { barbershopId: membership.barbershopId, barberId: data.barberId, startsAt, endsAt, timezone: membership.barbershop.timezone });
       await ensureNoBarberBreak(tx, { barbershopId: membership.barbershopId, barberId: data.barberId, startsAt, endsAt, timezone: membership.barbershop.timezone });
       await ensureNoBarberBlock(tx, { barbershopId: membership.barbershopId, barberId: data.barberId, startsAt, endsAt });
@@ -55,6 +57,7 @@ export async function createAppointment(formData: FormData) {
       await tx.appointment.create({ data: { barbershopId: membership.barbershopId, barberId: data.barberId, customerId: data.customerId, serviceId: data.serviceId, startsAt, endsAt, price: service.price, notes: data.notes || null, status: data.status } });
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   } catch (error) {
+    if (error instanceof Error && error.message === "BARBER_SERVICE_INELIGIBLE") fail(data.date, BARBER_SERVICE_MESSAGE);
     if (error instanceof Error && availabilityError(error)) fail(data.date, availabilityError(error)!);
     if (error instanceof Error && error.message === "BARBER_BREAK") fail(data.date, "El horario coincide con un descanso del barbero");
     if (error instanceof Error && error.message === "BARBER_BLOCKED") fail(data.date, "El barbero tiene un bloqueo en ese horario");
@@ -65,7 +68,7 @@ export async function createAppointment(formData: FormData) {
 }
 
 export async function updateAppointment(formData: FormData) {
-  const { membership, data, service, startsAt, endsAt, expectedUpdatedAt } = await appointmentData(formData, true);
+  const { membership, data, service, startsAt, endsAt, expectedUpdatedAt, checkEligibility } = await appointmentData(formData, true);
   const id = data.id;
   if (!id) fail(data.date, "Reserva no encontrada");
   try {
@@ -75,6 +78,7 @@ export async function updateAppointment(formData: FormData) {
       if (current.sale) throw new Error("APPOINTMENT_PAID");
       if (data.status === "COMPLETED" && current.status !== "COMPLETED") throw new Error("CHECKOUT_REQUIRED");
       if (expectedUpdatedAt && current.updatedAt.getTime() !== expectedUpdatedAt.getTime()) throw new Error("APPOINTMENT_CHANGED");
+      if (checkEligibility) await ensureBarberService(tx, membership.barbershopId, data.barberId, data.serviceId);
       if (data.status !== "CANCELLED") {
         await ensureBarberAvailable(tx, { barbershopId: membership.barbershopId, barberId: data.barberId, startsAt, endsAt, timezone: membership.barbershop.timezone });
         await ensureNoBarberBreak(tx, { barbershopId: membership.barbershopId, barberId: data.barberId, startsAt, endsAt, timezone: membership.barbershop.timezone });
@@ -85,6 +89,7 @@ export async function updateAppointment(formData: FormData) {
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   } catch (error) {
     if (error instanceof Error && error.message === "APPOINTMENT_NOT_FOUND") fail(data.date, "Reserva no encontrada");
+    if (error instanceof Error && error.message === "BARBER_SERVICE_INELIGIBLE") fail(data.date, BARBER_SERVICE_MESSAGE);
     if (error instanceof Error && error.message === "APPOINTMENT_CHANGED") fail(data.date, "La reserva cambió. Actualiza la agenda e intenta nuevamente.");
     if (error instanceof Error && error.message === "APPOINTMENT_PAID") fail(data.date, "La reserva ya tiene una venta registrada y no puede modificarse.");
     if (error instanceof Error && error.message === "CHECKOUT_REQUIRED") fail(data.date, "Usa Cobrar para completar la atención y registrar su venta.");
@@ -108,6 +113,7 @@ export async function restoreAppointment(formData: FormData) {
       if (!appointment) throw new Error("APPOINTMENT_NOT_FOUND");
       const barber = await tx.barber.findFirst({ where: { id: appointment.barberId, barbershopId: membership.barbershopId, isActive: true }, select: { id: true } });
       if (!barber) throw new Error("BARBER_INACTIVE");
+      await ensureBarberService(tx, membership.barbershopId, appointment.barberId, appointment.serviceId);
       await ensureBarberAvailable(tx, { barbershopId: membership.barbershopId, barberId: appointment.barberId, startsAt: appointment.startsAt, endsAt: appointment.endsAt, timezone: membership.barbershop.timezone });
       await ensureNoBarberBreak(tx, { barbershopId: membership.barbershopId, barberId: appointment.barberId, startsAt: appointment.startsAt, endsAt: appointment.endsAt, timezone: membership.barbershop.timezone });
       await ensureNoBarberBlock(tx, { barbershopId: membership.barbershopId, barberId: appointment.barberId, startsAt: appointment.startsAt, endsAt: appointment.endsAt });
@@ -116,6 +122,7 @@ export async function restoreAppointment(formData: FormData) {
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   } catch (error) {
     if (error instanceof Error && error.message === "APPOINTMENT_NOT_FOUND") fail(date, "La reserva cancelada no fue encontrada");
+    if (error instanceof Error && error.message === "BARBER_SERVICE_INELIGIBLE") fail(date, BARBER_SERVICE_MESSAGE);
     if (error instanceof Error && error.message === "BARBER_INACTIVE") redirect(`/agenda?date=${date}&cancelled=true&error=${encodeURIComponent("No se puede restaurar porque el barbero no está activo")}`);
     if (error instanceof Error && availabilityError(error)) redirect(`/agenda?date=${date}&cancelled=true&error=${encodeURIComponent(`No se puede restaurar: ${availabilityError(error)!.toLowerCase()}`)}`);
     if (error instanceof Error && error.message === "BARBER_BREAK") redirect(`/agenda?date=${date}&cancelled=true&error=${encodeURIComponent("No se puede restaurar porque coincide con un descanso del barbero")}`);

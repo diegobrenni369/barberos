@@ -19,6 +19,7 @@ const messages: Record<string, string> = {
   APPOINTMENT_NOT_MOVABLE: "Solo puedes mover reservas agendadas o confirmadas.",
   BARBER_INACTIVE: "El barbero no está activo.",
   SERVICE_INACTIVE: "El servicio no está activo.",
+  BARBER_SERVICE_INELIGIBLE: "Este profesional no realiza este servicio.",
   INVALID_TIME: "La hora seleccionada no existe en esta fecha.",
   BARBERSHOP_CLOSED: "La barbería está cerrada.",
   OUTSIDE_BUSINESS_HOURS: "Fuera del horario de atención.",

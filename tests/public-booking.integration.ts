@@ -28,6 +28,7 @@ async function main() {
     const service = await db.service.create({ data: { barbershopId: tenantId, name: "Corte", durationMinutes: 30, price: "12000", isOnlineBookingEnabled: true } });
     const diego = await db.barber.create({ data: { barbershopId: tenantId, name: "Diego" } });
     const juan = await db.barber.create({ data: { barbershopId: tenantId, name: "Juan" } });
+    await db.barberService.createMany({ data: [diego, juan].map(barber => ({ barbershopId: tenantId, barberId: barber.id, serviceId: service.id })) });
     const customer = await db.customer.create({ data: { barbershopId: tenantId, name: "Existing private customer", phone: "+56 9 1111 1111" } });
     await db.barberAvailability.createMany({ data: DAYS.map(dayOfWeek => ({ barbershopId: tenantId, barberId: diego.id, dayOfWeek, startMinute: 540, endMinute: 1020 })) });
     await db.barberBreak.createMany({ data: DAYS.map(dayOfWeek => ({ barbershopId: tenantId, barberId: diego.id, dayOfWeek, startMinute: 780, endMinute: 840, label: "Private lunch label" })) });
@@ -102,6 +103,7 @@ async function main() {
     passed("concurrent same-phone bookings reuse one customer");
     const otherService = await db.service.create({ data: { barbershopId: otherId, name: "Other", price: "12000", durationMinutes: 30, isOnlineBookingEnabled: true } });
     const otherBarber = await db.barber.create({ data: { barbershopId: otherId, name: "Other" } });
+    await db.barberService.create({ data: { barbershopId: otherId, barberId: otherBarber.id, serviceId: otherService.id } });
     await confirmPublicBooking(db, { ...request("09:00", otherBarber.id, "+56977777777"), slug: otherId, serviceId: otherService.id }, now);
     assert.equal(await db.customer.count({ where: { phone: "+56977777777" } }), 2);
     await assert.rejects(confirmPublicBooking(db, { ...request("09:00"), serviceId: otherService.id }, now));

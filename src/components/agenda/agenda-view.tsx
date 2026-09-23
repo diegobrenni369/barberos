@@ -92,7 +92,7 @@ export function AgendaView({
   const columnTemplate = `${HOUR_COLUMN_WIDTH}px repeat(${barbers.length}, minmax(${BARBER_MIN_WIDTH}px, 1fr))`;
 
   return (
-    <AppointmentDragProvider date={date} appointments={appointments}>
+    <AppointmentDragProvider date={date} appointments={appointments} services={services}>
     <div className="space-y-4">
       <AgendaToolbar date={date} today={today} onNew={() => openNew()} panelControls={panelControls} />
       {barbers.length === 0 ? (
