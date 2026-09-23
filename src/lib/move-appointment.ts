@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { zonedDateTimeToUtc, utcToZonedParts } from "@/lib/agenda";
 import { ensureBarberAvailable, ensureNoBarberBlock, ensureNoBarberBreak } from "@/lib/barber-availability";
 import { ensureNoOverlap } from "@/lib/appointment-overlap";
+import { ensureBarberService } from "@/lib/barber-service";
 
 // Called inside a SERIALIZABLE transaction. Duration and service come from DB,
 // never from the draggable card or client-provided data.
@@ -14,6 +15,7 @@ export async function moveAppointmentInTransaction(tx: Prisma.TransactionClient,
   const service = await tx.service.findFirst({ where: { id: current.serviceId, barbershopId: tenant.barbershopId, isActive: true }, select: { id: true } });
   if (!barber) throw new Error("BARBER_INACTIVE");
   if (!service) throw new Error("SERVICE_INACTIVE");
+  await ensureBarberService(tx, tenant.barbershopId, input.barberId, current.serviceId);
   const startsAt = zonedDateTimeToUtc(input.date, input.time, tenant.timezone);
   const local = utcToZonedParts(startsAt, tenant.timezone);
   if (local.date !== input.date || local.time !== input.time) throw new Error("INVALID_TIME");

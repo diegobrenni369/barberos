@@ -35,7 +35,7 @@ Se usa el timezone de la barbería, nunca el del navegador para resolver instant
 
 ## Profesionales y concurrencia
 
-No existe BarberService: temporalmente todos los barberos activos del tenant realizan todos sus servicios. Si el producto necesita especialidades, incorporar esa relación en una fase posterior.
+BarberService define explícitamente qué profesionales realizan cada servicio. La UI, slots y confirmación consideran solo asociados activos del tenant. ANY mantiene el orden determinista por ID y prueba únicamente estos candidatos. Ver `docs/barber-services.md` para migración y comportamiento de reservas existentes.
 
 ANY es null en la búsqueda, nunca un barberId almacenado. Se recorre el conjunto elegible por ID ascendente y se asigna el primer disponible. Los slots públicos son la unión deduplicada de disponibilidad real. No hay asignación aleatoria.
 

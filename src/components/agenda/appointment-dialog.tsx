@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   createAppointment,
   restoreAppointment,
@@ -29,6 +29,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 export type AgendaOption = { id: string; name: string };
 export type ServiceOption = AgendaOption & {
+  barberIds: string[];
   durationMinutes: number;
   price: string;
 };
@@ -89,11 +90,12 @@ export function AppointmentDialog({
   const [status, setStatus] = useState(appointment?.status ?? "SCHEDULED");
   const [time, setTime] = useState(appointment?.time ?? defaults.time);
   const service = services.find((item) => item.id === serviceId);
-  const endTime = useMemo(() => {
-    const [hours, minutes] = time.split(":").map(Number);
-    const total = hours * 60 + minutes + (service?.durationMinutes ?? 0);
-    return `${String(Math.floor(total / 60) % 24).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
-  }, [time, service]);
+  const eligibleBarbers = barbers.filter(item => service?.barberIds.includes(item.id));
+  const eligibleBarberId = eligibleBarbers.some(item => item.id === barberId) ? barberId : "";
+  const durationMinutes = service?.durationMinutes ?? 0;
+  const [hours, minutes] = time.split(":").map(Number);
+  const total = hours * 60 + minutes + durationMinutes;
+  const endTime = `${String(Math.floor(total / 60) % 24).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
   const money = new Intl.NumberFormat("es-CL", {
     style: "currency",
     currency: "CLP",
@@ -101,7 +103,7 @@ export function AppointmentDialog({
   });
   const action = appointment ? updateAppointment : createAppointment;
   const customerName = customers.find((item) => item.id === customerId)?.name;
-  const barberName = barbers.find((item) => item.id === barberId)?.name;
+  const barberName = eligibleBarbers.find((item) => item.id === eligibleBarberId)?.name;
   const statusName = statuses.find((item) => item.value === status)?.label;
 
   return (
@@ -120,7 +122,7 @@ export function AppointmentDialog({
           </DialogHeader>
           <div className="grid gap-4 py-5">
             <input type="hidden" name="id" value={appointment?.id ?? ""} />
-            <input type="hidden" name="barberId" value={barberId} />
+            <input type="hidden" name="barberId" value={eligibleBarberId} />
             <input type="hidden" name="customerId" value={customerId} />
             <input type="hidden" name="serviceId" value={serviceId} />
             <input type="hidden" name="status" value={status} />
@@ -144,29 +146,13 @@ export function AppointmentDialog({
               </Select>
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Barbero">
-                <Select
-                  value={barberId}
-                  onValueChange={(value) => setBarberId(value ?? "")}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecciona un barbero">
-                      {barberName}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {barbers.map((item) => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
               <Field label="Servicio">
                 <Select
                   value={serviceId}
-                  onValueChange={(value) => setServiceId(value ?? "")}
+                  onValueChange={(value) => {
+                    setServiceId(value ?? "");
+                    if (!services.find(item => item.id === value)?.barberIds.includes(barberId)) setBarberId("");
+                  }}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Selecciona un servicio">
@@ -182,7 +168,27 @@ export function AppointmentDialog({
                   </SelectContent>
                 </Select>
               </Field>
+              <Field label="Barbero">
+                <Select
+                  value={eligibleBarberId}
+                  onValueChange={(value) => setBarberId(value ?? "")}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecciona un barbero">
+                      {barberName}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {eligibleBarbers.map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
             </div>
+            {!eligibleBarberId && <p className="text-xs text-muted-foreground">Selecciona un profesional que realice este servicio.{eligibleBarbers.length === 0 ? " Configura los profesionales en Servicios." : ""}</p>}
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Fecha">
                 <Input
@@ -262,7 +268,7 @@ export function AppointmentDialog({
             )}
             <Button
               type="submit"
-              disabled={!barberId || !customerId || !serviceId}
+              disabled={!eligibleBarberId || !customerId || !serviceId}
             >
               Guardar reserva
             </Button>
