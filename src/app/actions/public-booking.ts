@@ -13,6 +13,6 @@ export async function bookAppointment(input: unknown): Promise<{ ok: true; confi
     if (!(error instanceof PublicBookingError)) console.error("Public booking failed", { code: "BOOKING_FAILED" });
     return { ok: false, error: error instanceof PublicBookingError ? error.message : "No pudimos confirmar la reserva. Revisa los horarios antes de reintentar." };
   }
-  revalidatePath("/agenda");
+  revalidatePath("/dashboard"); revalidatePath("/agenda");
   return { ok: true, confirmation };
 }

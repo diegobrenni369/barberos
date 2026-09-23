@@ -21,6 +21,13 @@ export function AgendaPanel({ date, today, barbers, selectedIds }: {
   const params = useSearchParams();
   const [pending, startTransition] = useTransition();
   const [month, setMonth] = useState(() => calendarDate(date));
+  const [previousDate, setPreviousDate] = useState(date);
+
+  // Follow toolbar/history navigation without remounting the calendar panel.
+  if (previousDate !== date) {
+    setPreviousDate(date);
+    setMonth(calendarDate(date));
+  }
 
   function navigate(changes: Record<string, string | null>, selectedDate = date) {
     startTransition(() => router.push(agendaHref(params.toString(), selectedDate, changes), { scroll: false }));
@@ -44,8 +51,7 @@ export function AgendaPanel({ date, today, barbers, selectedIds }: {
         onMonthChange={setMonth}
         selected={calendarDate(date)}
         today={calendarDate(today)}
-        onSelect={(value) => { if (value) navigate({}, civilDate(value)); }}
-        disabled={pending}
+        onSelect={(value) => { if (value && !pending && civilDate(value) !== date) navigate({}, civilDate(value)); }}
         className="w-full bg-transparent p-0 [--cell-size:--spacing(8)]"
       />
       </div>
