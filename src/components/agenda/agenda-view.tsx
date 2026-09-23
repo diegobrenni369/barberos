@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import {
   AGENDA_PIXELS_PER_MINUTE,
   AGENDA_SLOT_MINUTES,
@@ -39,6 +39,7 @@ function initials(name: string) {
 
 export function AgendaView({
   date,
+  dateLabel,
   today,
   nowMinutes,
   barbers,
@@ -57,6 +58,7 @@ export function AgendaView({
   suppressAppointmentHover = false,
 }: {
   date: string;
+  dateLabel: string;
   today: string;
   showCancelled: boolean;
   nowMinutes: number | null;
@@ -76,6 +78,26 @@ export function AgendaView({
   onAppointmentSelect?: (appointment: AppointmentData, onEdit: () => void) => void;
 }) {
   const totalMinutes = endMinute - startMinute;
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [slotMenu, setSlotMenu] = useState<string | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{
+    anchor: { getBoundingClientRect: () => DOMRect };
+    boundary: { x: number; y: number; width: number; height: number };
+  }>();
+  function positionSlotMenu(target: HTMLButtonElement, point?: { x: number; y: number }) {
+    const container = scrollRef.current;
+    if (!container) return;
+    const viewport = container.getBoundingClientRect();
+    const header = container.querySelector(".sticky")?.getBoundingClientRect();
+    const slot = target.getBoundingClientRect();
+    const x = point?.x ?? Math.max(viewport.left, slot.left) + 12;
+    const y = point?.y ?? Math.max(header?.bottom ?? viewport.top, slot.top) + 8;
+    const top = Math.max(viewport.top, header?.bottom ?? viewport.top);
+    setMenuPosition({
+      anchor: { getBoundingClientRect: () => new DOMRect(x, y, 0, 0) },
+      boundary: { x: viewport.left, y: top, width: container.clientWidth, height: Math.max(0, viewport.top + container.clientHeight - top) },
+    });
+  }
   const gridHeight = totalMinutes * AGENDA_PIXELS_PER_MINUTE;
   const [dialog, setDialog] = useState<{
     appointment?: AppointmentData;
@@ -93,14 +115,14 @@ export function AgendaView({
 
   return (
     <AppointmentDragProvider date={date} appointments={appointments} services={services}>
-    <div className="space-y-4">
-      <AgendaToolbar date={date} today={today} onNew={() => openNew()} panelControls={panelControls} />
+    <div className="flex h-full min-h-0 min-w-0 flex-col gap-4">
+      <AgendaToolbar date={date} dateLabel={dateLabel} today={today} onNew={() => openNew()} panelControls={panelControls} />
       {barbers.length === 0 ? (
         <div className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">
           {allBarbers.length === 0 ? "Agrega al menos un barbero activo para utilizar la agenda." : "Selecciona un barbero en el panel para mostrar su agenda."}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border bg-card shadow-xs">
+        <div ref={scrollRef} onScroll={() => setSlotMenu(null)} className="min-h-0 flex-1 overflow-auto rounded-xl border bg-card shadow-xs">
           <div
             style={{
               width: "100%",
@@ -189,12 +211,14 @@ export function AgendaView({
                       && !blocks.some((item) => item.barberId === barber.id && (item.allDay || overlaps(toMinutes(item.startTime), toMinutes(item.endTime))))
                       && !appointments.some((item) => item.barberId === barber.id && item.status !== "CANCELLED" && overlaps(toMinutes(item.time), toMinutes(item.endTime)));
                   }).map((minutes) => (
-                    <DropdownMenu key={minutes}>
+                    <DropdownMenu key={minutes} open={slotMenu === `${barber.id}-${minutes}`} onOpenChange={(open) => setSlotMenu(open ? `${barber.id}-${minutes}` : null)}>
                       <DropdownMenuTrigger
                         nativeButton
+                        onPointerDown={(event) => positionSlotMenu(event.currentTarget, { x: event.clientX, y: event.clientY })}
+                        onKeyDown={(event) => { if (["Enter", " ", "ArrowDown", "ArrowUp"].includes(event.key)) positionSlotMenu(event.currentTarget); }}
                         render={<button type="button" aria-label={`Acciones a las ${formatTime(minutes)} con ${barber.name}`} className="absolute z-[2] transition-colors hover:bg-primary/[0.035] focus-visible:z-20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring" style={{ left: 0, right: 0, top: AGENDA_TOP_GUTTER + (minutes - startMinute) * AGENDA_PIXELS_PER_MINUTE, height: Math.min(AGENDA_SLOT_MINUTES, endMinute - minutes) * AGENDA_PIXELS_PER_MINUTE }} />}
                       />
-                      <DropdownMenuContent align="start" className="w-auto min-w-[160px]">
+                      <DropdownMenuContent align="start" sideOffset={8} className="w-auto min-w-[160px]" positionerProps={{ anchor: menuPosition?.anchor, positionMethod: "fixed", collisionBoundary: menuPosition?.boundary, collisionPadding: 6, className: "isolate z-20 outline-none" }}>
                         <DropdownMenuItem onClick={() => openNew(barber.id, minutes)}><CalendarPlus />Nueva reserva</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setBlockDialog({ barberId: barber.id, time: formatTime(minutes) })}><LockKeyhole />Bloquear horario</DropdownMenuItem>
                       </DropdownMenuContent>

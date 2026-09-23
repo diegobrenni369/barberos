@@ -9,7 +9,7 @@ export async function checkoutAppointment(input: unknown): Promise<{ ok: true; s
   const membership = await requireRole("OWNER");
   try {
     const saleId = await registerCheckout(prisma, membership.barbershopId, input);
-    revalidatePath("/agenda");
+    revalidatePath("/dashboard"); revalidatePath("/agenda");
     revalidatePath("/cash");
     return { ok: true, saleId };
   } catch (error) {

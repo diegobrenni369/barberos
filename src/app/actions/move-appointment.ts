@@ -41,6 +41,6 @@ export async function moveAppointment(input: unknown) {
     console.error("Error moving appointment", error);
     return { ok: false, error: "No se pudo mover la reserva. Intenta nuevamente." };
   }
-  revalidatePath("/agenda");
+  revalidatePath("/dashboard"); revalidatePath("/agenda");
   return { ok: true };
 }

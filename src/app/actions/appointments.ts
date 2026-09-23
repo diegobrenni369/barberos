@@ -64,7 +64,7 @@ export async function createAppointment(formData: FormData) {
     if (error instanceof Error && (error.message === "APPOINTMENT_OVERLAP" || (error as { code?: string }).code === "P2034")) fail(data.date, "Ese horario ya está ocupado para el barbero seleccionado");
     throw error;
   }
-  revalidatePath("/agenda"); redirect(`/agenda?date=${data.date}`);
+  revalidatePath("/dashboard"); revalidatePath("/agenda"); redirect(`/agenda?date=${data.date}`);
 }
 
 export async function updateAppointment(formData: FormData) {
@@ -99,7 +99,7 @@ export async function updateAppointment(formData: FormData) {
     if (error instanceof Error && (error.message === "APPOINTMENT_OVERLAP" || (error as { code?: string }).code === "P2034")) fail(data.date, "Ese horario ya está ocupado para el barbero seleccionado");
     throw error;
   }
-  revalidatePath("/agenda"); redirect(`/agenda?date=${data.date}`);
+  revalidatePath("/dashboard"); revalidatePath("/agenda"); redirect(`/agenda?date=${data.date}`);
 }
 
 export async function restoreAppointment(formData: FormData) {
@@ -130,5 +130,5 @@ export async function restoreAppointment(formData: FormData) {
     if (error instanceof Error && (error.message === "APPOINTMENT_OVERLAP" || (error as { code?: string }).code === "P2034")) redirect(`/agenda?date=${date}&cancelled=true&error=${encodeURIComponent("No se puede restaurar porque el horario ya está ocupado")}`);
     throw error;
   }
-  revalidatePath("/agenda"); redirect(`/agenda?date=${date}&cancelled=true`);
+  revalidatePath("/dashboard"); revalidatePath("/agenda"); redirect(`/agenda?date=${date}&cancelled=true`);
 }

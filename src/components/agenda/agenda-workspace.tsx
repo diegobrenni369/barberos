@@ -21,7 +21,7 @@ export function AgendaWorkspace({ isClosed, ...props }: ComponentProps<typeof Ag
   const params = useSearchParams();
   const filter = params.get("barbers");
   const selected = filter === null ? props.barbers : props.barbers.filter(barber => filter.split(",").includes(barber.id));
-  const panel = <AgendaPanel key={props.date} date={props.date} today={props.today} barbers={props.barbers} selectedIds={selected.map(barber => barber.id)} />;
+  const panel = <AgendaPanel date={props.date} today={props.today} barbers={props.barbers} selectedIds={selected.map(barber => barber.id)} />;
   const content = <>
     <div hidden={Boolean(appointment)}>{panel}</div>
     {appointment && <AppointmentQuickView appointment={appointment} barberName={props.barbers.find(barber => barber.id === appointment.barberId)?.name ?? "Barbero"} onClose={closeDetail} onEdit={() => { detail?.onEdit(); closeDetail(); setMobileOpen(false); }} />}
@@ -41,13 +41,13 @@ export function AgendaWorkspace({ isClosed, ...props }: ComponentProps<typeof Ag
   </>;
 
   return (
-    <div data-agenda-workspace className={`min-w-0 ${showPanel ? "md:pr-[280px]" : ""}`}>
-      <div className="min-w-0 flex-1">
+    <div data-agenda-workspace className="flex min-h-0 min-w-0 flex-1">
+      <div className="min-h-0 min-w-0 flex-1 px-4 pb-4 pt-3 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8">
         {isClosed
-          ? <ClosedAgenda date={props.date} today={props.today} panelControls={controls} />
+          ? <ClosedAgenda date={props.date} dateLabel={props.dateLabel} today={props.today} panelControls={controls} />
           : <AgendaView {...props} suppressAppointmentHover={Boolean(appointment)} barbers={selected} allBarbers={props.barbers} panelControls={controls} onAppointmentSelect={(item, onEdit) => { setDetail({ id: item.id, date: props.date, onEdit }); if (window.matchMedia("(max-width: 767px)").matches) setMobileOpen(true); }} />}
       </div>
-      {showPanel && <aside id={id} aria-label="Panel de agenda" className="fixed inset-y-0 right-0 top-14 z-30 hidden w-[280px] overflow-y-auto border-l bg-sidebar text-sidebar-foreground md:block">
+      {showPanel && <aside id={id} aria-label="Panel de agenda" className="z-30 hidden min-h-0 w-[280px] shrink-0 overflow-y-auto border-l bg-sidebar text-sidebar-foreground md:block">
         <div className="flex items-center gap-2 border-b px-5 py-4 text-sm font-medium">{back}{appointment ? "Reserva" : "Calendario y filtros"}</div>
         {content}
       </aside>}

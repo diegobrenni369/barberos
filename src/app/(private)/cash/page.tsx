@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { validSalesInRange } from "@/lib/sales-report";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -19,7 +20,7 @@ export default async function CashPage({ searchParams }: { searchParams: Promise
   const parsed = z.iso.date().safeParse(params.date);
   const date = parsed.success ? parsed.data : today;
   const range = dayRangeUtc(date, timezone);
-  const sales = await prisma.sale.findMany({ where: { barbershopId: membership.barbershopId, status: "COMPLETED", createdAt: { gte: range.start, lt: range.end } }, include: { items: true, payments: true, commission: true }, orderBy: [{ createdAt: "desc" }, { id: "desc" }] });
+  const sales = await prisma.sale.findMany({ where: validSalesInRange(membership.barbershopId, range.start, range.end), include: { items: true, payments: true, commission: true }, orderBy: [{ createdAt: "desc" }, { id: "desc" }] });
   const total = sales.reduce((sum, sale) => sum.plus(sale.total), new Prisma.Decimal(0));
   const methods = Object.fromEntries(Object.keys(paymentMethods).map(method => [method, sales.flatMap(sale => sale.payments).filter(payment => payment.method === method).reduce((sum, payment) => sum.plus(payment.amount), new Prisma.Decimal(0)).toString()])) as Record<CashPaymentMethod, string>;
   const serialized: SaleDetailsData[] = sales.map(sale => ({ ...sale, createdAt: sale.createdAt.toISOString(), subtotal: sale.subtotal.toString(), discountAmount: sale.discountAmount.toString(), total: sale.total.toString(), items: sale.items.map(item => ({ ...item, unitPrice: item.unitPrice.toString(), subtotal: item.subtotal.toString() })), payments: sale.payments.map(payment => ({ id: payment.id, method: payment.method, amount: payment.amount.toString() })), commission: sale.commission ? { rate: sale.commission.rate.toString(), baseAmount: sale.commission.baseAmount.toString(), amount: sale.commission.amount.toString() } : null }));
