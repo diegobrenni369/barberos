@@ -20,6 +20,18 @@ enum AppointmentStatus {
   NO_SHOW
 }
 
+enum SaleStatus {
+  COMPLETED
+  VOIDED
+}
+
+enum PaymentMethod {
+  CASH
+  DEBIT_CARD
+  CREDIT_CARD
+  TRANSFER
+}
+
 enum DayOfWeek {
   SUNDAY
   MONDAY
@@ -63,6 +75,7 @@ model Barbershop {
   barberBlocks   BarberBlock[]
   businessHours  BarbershopBusinessHour[]
   blockReasons   BlockReason[]
+  sales          Sale[]
 }
 
 model Customer {
@@ -77,6 +90,7 @@ model Customer {
   updatedAt    DateTime      @updatedAt
   barbershop   Barbershop    @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
   appointments Appointment[]
+  sales        Sale[]
 
   @@index([barbershopId])
   @@index([barbershopId, name])
@@ -94,6 +108,7 @@ model Service {
   updatedAt       DateTime      @updatedAt
   barbershop      Barbershop    @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
   appointments    Appointment[]
+  saleItems       SaleItem[]
 
   @@index([barbershopId])
 }
@@ -129,6 +144,8 @@ model Barber {
   availabilities BarberAvailability[]
   breaks         BarberBreak[]
   blocks         BarberBlock[]
+  sales          Sale[]
+  commissions    Commission[]
 
   @@index([barbershopId])
   @@index([userId])
@@ -233,8 +250,83 @@ model Appointment {
   barber       Barber            @relation(fields: [barberId], references: [id], onDelete: Restrict)
   customer     Customer          @relation(fields: [customerId], references: [id], onDelete: Restrict)
   service      Service           @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  sale         Sale?
 
   @@index([barbershopId, startsAt])
   @@index([barbershopId, barberId, startsAt])
   @@index([barberId, startsAt, endsAt])
+}
+
+model Sale {
+  id             String       @id @default(cuid())
+  barbershopId   String
+  appointmentId  String?      @unique
+  customerId     String?
+  barberId       String
+  customerName   String
+  barberName     String
+  currency       String
+  subtotal       Decimal      @db.Decimal(12, 2)
+  discountAmount Decimal      @db.Decimal(12, 2)
+  total          Decimal      @db.Decimal(12, 2)
+  status         SaleStatus   @default(COMPLETED)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  barbershop     Barbershop   @relation(fields: [barbershopId], references: [id], onDelete: Restrict)
+  appointment    Appointment? @relation(fields: [appointmentId], references: [id], onDelete: Restrict)
+  customer       Customer?    @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  barber         Barber       @relation(fields: [barberId], references: [id], onDelete: Restrict)
+  items          SaleItem[]
+  payments       Payment[]
+  commission     Commission?
+
+  @@unique([id, barbershopId])
+  @@index([barbershopId, createdAt])
+  @@index([barberId])
+  @@index([customerId])
+}
+
+model SaleItem {
+  id           String   @id @default(cuid())
+  barbershopId String
+  saleId       String
+  serviceId    String?
+  description  String
+  quantity     Int      @default(1)
+  unitPrice    Decimal  @db.Decimal(12, 2)
+  subtotal     Decimal  @db.Decimal(12, 2)
+  createdAt    DateTime @default(now())
+  sale         Sale     @relation(fields: [saleId, barbershopId], references: [id, barbershopId], onDelete: Restrict)
+  service      Service? @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  @@index([barbershopId, saleId])
+  @@index([serviceId])
+}
+
+model Payment {
+  id           String        @id @default(cuid())
+  barbershopId String
+  saleId       String
+  method       PaymentMethod
+  amount       Decimal       @db.Decimal(12, 2)
+  createdAt    DateTime      @default(now())
+  sale         Sale          @relation(fields: [saleId, barbershopId], references: [id, barbershopId], onDelete: Restrict)
+
+  @@index([barbershopId, saleId])
+}
+
+model Commission {
+  id           String   @id @default(cuid())
+  barbershopId String
+  saleId       String   @unique
+  barberId     String
+  rate         Decimal  @db.Decimal(5, 2)
+  baseAmount   Decimal  @db.Decimal(12, 2)
+  amount       Decimal  @db.Decimal(12, 2)
+  createdAt    DateTime @default(now())
+  sale         Sale     @relation(fields: [saleId, barbershopId], references: [id, barbershopId], onDelete: Restrict)
+  barber       Barber   @relation(fields: [barberId], references: [id], onDelete: Restrict)
+
+  @@unique([saleId, barbershopId])
+  @@index([barbershopId, barberId, createdAt])
 }

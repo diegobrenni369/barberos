@@ -3,7 +3,7 @@
 import { AppointmentData } from "@/components/agenda/appointment-dialog";
 import { AGENDA_PIXELS_PER_MINUTE, AGENDA_TOP_GUTTER } from "@/lib/agenda";
 
-const appointmentStatusStyles: Record<string, { label: string; card: string; indicator: string }> = {
+export const appointmentStatusStyles: Record<string, { label: string; card: string; indicator: string }> = {
   SCHEDULED: {
     label: "Agendada",
     card: "border-blue-200/70 bg-blue-50/60 hover:bg-blue-50/80 dark:border-blue-800/50 dark:bg-blue-950/20 dark:hover:bg-blue-950/30",

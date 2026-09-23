@@ -47,6 +47,9 @@ export type AppointmentData = {
   price: string;
   updatedAt: string;
   durationMinutes: number;
+  currency: string;
+  canCharge?: boolean;
+  sale?: { total: string; currency: string; method: import("@/lib/cash").CashPaymentMethod | null; status: string; paymentLabel: string } | null;
 };
 
 export const statuses = [
@@ -210,7 +213,7 @@ export function AppointmentDialog({
                     <SelectValue>{statusName}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {statuses.map((item) => (
+                    {statuses.filter(item => item.value !== "COMPLETED" || appointment?.status === "COMPLETED").map((item) => (
                       <SelectItem key={item.value} value={item.value}>
                         {item.label}
                       </SelectItem>
