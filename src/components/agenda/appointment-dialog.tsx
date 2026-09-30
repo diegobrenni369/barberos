@@ -1,4 +1,5 @@
 "use client";
+import { DatePicker } from "@/components/ui/date-picker";
 
 import { useState } from "react";
 import {
@@ -191,8 +192,7 @@ export function AppointmentDialog({
             {!eligibleBarberId && <p className="text-xs text-muted-foreground">Selecciona un profesional que realice este servicio.{eligibleBarbers.length === 0 ? " Configura los profesionales en Servicios." : ""}</p>}
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Fecha">
-                <Input
-                  type="date"
+                <DatePicker
                   name="date"
                   required
                   defaultValue={appointment?.date ?? defaults.date}

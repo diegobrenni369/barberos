@@ -11,6 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { requireBarbershopAccess } from "@/lib/auth";
 import { utcToZonedParts } from "@/lib/agenda";
 import { prisma } from "@/lib/prisma";
+import { commissionPeriod, commissionScope } from "@/lib/commissions";
+import { formatMoney } from "@/lib/cash";
 
 export default async function BarberDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const membership = await requireBarbershopAccess(); const { id } = await params;
@@ -20,10 +22,12 @@ export default async function BarberDetailPage({ params }: { params: Promise<{ i
     prisma.blockReason.findMany({ where: { barbershopId: membership.barbershopId, isActive: true }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
   ]);
   if (!barber) notFound();
+  const pending = membership.role === "OWNER" ? await prisma.commission.aggregate({ where: { ...commissionScope(membership.barbershopId, commissionPeriod(membership.barbershop.timezone, {})), barberId: id, OR: [{ settlementItem: null }, { settlementItem: { settlement: { status: "PENDING" } } }] }, _sum: { amount: true } }) : null;
   const blocks = barber.blocks.map((block) => { const start = utcToZonedParts(block.startsAt, membership.barbershop.timezone); const end = utcToZonedParts(block.endsAt, membership.barbershop.timezone); return { id: block.id, barberId: barber.id, date: start.date, startTime: start.time, endTime: end.time, allDay: start.time === "00:00" && end.date !== start.date, reasonId: block.reasonId, reasonName: block.reason.name, note: block.note ?? "" }; });
   return <section className="space-y-6">
     <Button nativeButton={false} variant="ghost" size="sm" render={<Link href="/barbers" />}><ArrowLeft />Volver a barberos</Button>
     <PageHeader title={barber.name} description="Perfil, disponibilidad y excepciones del barbero." />
+    {pending && <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4"><div><p className="font-medium">Comisiones · Este mes</p><p className="text-sm text-muted-foreground">{formatMoney(pending._sum.amount?.toString() ?? "0", membership.barbershop.currency)} pendiente</p></div><Button nativeButton={false} variant="outline" render={<Link href={`/commissions?barber=${id}`} />}>Ver comisiones</Button></div>}
     <div className="grid gap-6 lg:grid-cols-2">
       <Card><CardHeader><CardTitle>Resumen</CardTitle><CardDescription>Información operativa del integrante.</CardDescription></CardHeader><CardContent className="grid gap-3 text-sm"><Detail label="Estado"><StatusBadge active={barber.isActive} /></Detail><Detail label="Teléfono">{barber.phone || "—"}</Detail><Detail label="Email">{barber.email || "—"}</Detail><Detail label="Comisión">{barber.commissionRate.toString()}%</Detail></CardContent></Card>
       <Card><CardHeader className="flex flex-col items-start justify-between gap-4 xl:flex-row"><div><CardTitle>Horario semanal</CardTitle><CardDescription>{barber.availabilities.length ? "Horario personalizado" : "Usa el horario de la barbería"}</CardDescription></div>{membership.role === "OWNER" && <BarberScheduleDialog barber={{ id: barber.id, name: barber.name }} availability={barber.availabilities} breaks={barber.breaks} businessHours={businessHours} />}</CardHeader><CardContent><BarberHoursSummary availability={barber.availabilities} breaks={barber.breaks} businessHours={businessHours} /></CardContent></Card>
