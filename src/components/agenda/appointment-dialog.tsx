@@ -48,6 +48,7 @@ export type AppointmentData = {
   endTime: string;
   price: string;
   updatedAt: string;
+  customerConfirmedAt?: string | null;
   durationMinutes: number;
   currency: string;
   canCharge?: boolean;

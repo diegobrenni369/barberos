@@ -38,6 +38,7 @@ export function AppointmentQuickView({ appointment, barberName, onClose, onEdit 
 
   return <div className="space-y-4 px-5 py-4">
         <AppointmentDetails appointment={appointment} barberName={barberName} showDate />
+        {appointment.customerConfirmedAt && <p className="text-xs text-muted-foreground">Cliente confirmó asistencia</p>}
         {appointment.sale && <p className="text-xs text-muted-foreground">{appointment.sale.paymentLabel}{appointment.sale.method && <> · {paymentMethods[appointment.sale.method]}</>} · {formatMoney(appointment.sale.total, appointment.sale.currency)}</p>}
         {appointment.sale && appointment.canCharge && <Button variant="outline" disabled={pending} onClick={() => startTransition(async () => {
           setSaleError("");

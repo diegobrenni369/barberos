@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { syncAppointmentReminders } from "@/lib/appointment-reminders";
 import { zonedDateTimeToUtc, utcToZonedParts } from "@/lib/agenda";
 import { ensureBarberAvailable, ensureNoBarberBlock, ensureNoBarberBreak } from "@/lib/barber-availability";
 import { ensureNoOverlap } from "@/lib/appointment-overlap";
@@ -26,4 +27,5 @@ export async function moveAppointmentInTransaction(tx: Prisma.TransactionClient,
   await ensureNoBarberBlock(tx, args);
   await ensureNoOverlap(tx, tenant.barbershopId, input.barberId, startsAt, endsAt, current.id);
   await tx.appointment.updateMany({ where: { id: current.id, barbershopId: tenant.barbershopId, updatedAt: current.updatedAt }, data: { barberId: input.barberId, startsAt, endsAt } });
+  await syncAppointmentReminders(tx, tenant.barbershopId, current.id, current);
 }
