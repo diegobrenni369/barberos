@@ -1,4 +1,5 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
+import { syncAppointmentReminders } from "@/lib/appointment-reminders";
 import { dayRangeUtc, utcToZonedParts, zonedDateTimeToUtc } from "@/lib/agenda";
 import { dayOfWeekForDate, minuteToTime, ensureBarberAvailable, ensureNoBarberBreak, ensureNoBarberBlock } from "@/lib/barber-availability";
 import { ensureNoOverlap } from "@/lib/appointment-overlap";
@@ -97,10 +98,11 @@ export async function confirmPublicBooking(db: PrismaClient, raw: unknown, now =
           ORDER BY "createdAt", "id" LIMIT 1
         `;
         const customer = matches[0] ?? await tx.customer.create({ data: { barbershopId: day.shop.id, name: input.name, phone: input.phone, email: input.email || null }, select: { id: true } });
-        await tx.appointment.create({ data: {
+        const appointment = await tx.appointment.create({ data: {
           barbershopId: day.shop.id, customerId: customer.id, barberId: selected.barber.id, serviceId: day.service.id,
           startsAt: selected.startsAt, endsAt: selected.endsAt, price: day.service.price, status: "CONFIRMED", source: "ONLINE",
         } });
+        await syncAppointmentReminders(tx, day.shop.id, appointment.id, undefined, now);
         return { shop: day.shop.name, service: day.service.name, barber: selected.barber.name, date: input.date, time: input.time };
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     } catch (error) {

@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { appointmentSchema } from "@/lib/validations";
 import { ensureNoOverlap } from "@/lib/appointment-overlap";
 import { ensureBarberService, BARBER_SERVICE_MESSAGE } from "@/lib/barber-service";
+import { syncAppointmentReminders } from "@/lib/appointment-reminders";
 
 function fail(date: string, message: string): never { redirect(`/agenda?date=${date}&error=${encodeURIComponent(message)}`); }
 function availabilityError(error: Error) {
@@ -54,7 +55,8 @@ export async function createAppointment(formData: FormData) {
       await ensureNoBarberBreak(tx, { barbershopId: membership.barbershopId, barberId: data.barberId, startsAt, endsAt, timezone: membership.barbershop.timezone });
       await ensureNoBarberBlock(tx, { barbershopId: membership.barbershopId, barberId: data.barberId, startsAt, endsAt });
       await ensureNoOverlap(tx, membership.barbershopId, data.barberId, startsAt, endsAt);
-      await tx.appointment.create({ data: { barbershopId: membership.barbershopId, barberId: data.barberId, customerId: data.customerId, serviceId: data.serviceId, startsAt, endsAt, price: service.price, notes: data.notes || null, status: data.status } });
+      const created = await tx.appointment.create({ data: { barbershopId: membership.barbershopId, barberId: data.barberId, customerId: data.customerId, serviceId: data.serviceId, startsAt, endsAt, price: service.price, notes: data.notes || null, status: data.status } });
+      await syncAppointmentReminders(tx, membership.barbershopId, created.id);
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   } catch (error) {
     if (error instanceof Error && error.message === "BARBER_SERVICE_INELIGIBLE") fail(data.date, BARBER_SERVICE_MESSAGE);
@@ -73,7 +75,7 @@ export async function updateAppointment(formData: FormData) {
   if (!id) fail(data.date, "Reserva no encontrada");
   try {
     await prisma.$transaction(async (tx) => {
-      const current = await tx.appointment.findFirst({ where: { id, barbershopId: membership.barbershopId }, select: { id: true, status: true, updatedAt: true, sale: { select: { id: true } } } });
+      const current = await tx.appointment.findFirst({ where: { id, barbershopId: membership.barbershopId }, include: { sale: { select: { id: true } } } });
       if (!current) throw new Error("APPOINTMENT_NOT_FOUND");
       if (current.sale) throw new Error("APPOINTMENT_PAID");
       if (data.status === "COMPLETED" && current.status !== "COMPLETED") throw new Error("CHECKOUT_REQUIRED");
@@ -86,6 +88,7 @@ export async function updateAppointment(formData: FormData) {
         await ensureNoOverlap(tx, membership.barbershopId, data.barberId, startsAt, endsAt, id);
       }
       await tx.appointment.updateMany({ where: { id, barbershopId: membership.barbershopId }, data: { barberId: data.barberId, customerId: data.customerId, serviceId: data.serviceId, startsAt, endsAt, price: service.price, notes: data.notes || null, status: data.status } });
+      await syncAppointmentReminders(tx, membership.barbershopId, id, current);
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   } catch (error) {
     if (error instanceof Error && error.message === "APPOINTMENT_NOT_FOUND") fail(data.date, "Reserva no encontrada");
@@ -119,6 +122,7 @@ export async function restoreAppointment(formData: FormData) {
       await ensureNoBarberBlock(tx, { barbershopId: membership.barbershopId, barberId: appointment.barberId, startsAt: appointment.startsAt, endsAt: appointment.endsAt });
       await ensureNoOverlap(tx, membership.barbershopId, appointment.barberId, appointment.startsAt, appointment.endsAt, appointment.id);
       await tx.appointment.updateMany({ where: { id, barbershopId: membership.barbershopId, status: AppointmentStatus.CANCELLED }, data: { status: AppointmentStatus.SCHEDULED } });
+      await syncAppointmentReminders(tx, membership.barbershopId, id, appointment);
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   } catch (error) {
     if (error instanceof Error && error.message === "APPOINTMENT_NOT_FOUND") fail(date, "La reserva cancelada no fue encontrada");

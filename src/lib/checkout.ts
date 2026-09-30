@@ -1,5 +1,6 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { z } from "zod";
+import { syncAppointmentReminders } from "@/lib/appointment-reminders";
 
 export const checkoutSchema = z.object({
   appointmentId: z.string().min(1).max(100),
@@ -41,6 +42,7 @@ export async function checkoutInTransaction(tx: Prisma.TransactionClient, barber
     commission: { create: { barberId: appointment.barberId, rate, baseAmount: total, amount } },
   } });
   await tx.appointment.update({ where: { id: appointment.id }, data: { status: "COMPLETED" } });
+  await syncAppointmentReminders(tx, barbershopId, appointment.id, appointment);
   return sale.id;
 }
 
