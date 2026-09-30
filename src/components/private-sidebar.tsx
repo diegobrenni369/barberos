@@ -12,7 +12,7 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupConte
 const groups: { label: string; items: { title: string; url: string; icon: LucideIcon; disabled?: boolean }[] }[] = [
   { label: "Principal", items: [{ title: "Dashboard", url: "/dashboard", icon: LayoutDashboard }, { title: "Agenda", url: "/agenda", icon: CalendarDays }, { title: "Caja", url: "/cash", icon: Wallet }] },
   { label: "Gestión", items: [{ title: "Clientes", url: "/customers", icon: Users }, { title: "Barberos", url: "/barbers", icon: Scissors }, { title: "Servicios", url: "/services", icon: Wrench }] },
-  { label: "Administración", items: [{ title: "Configuración", url: "/settings", icon: Settings }] },
+  { label: "Administración", items: [{ title: "Comisiones", url: "/commissions", icon: Wallet }, { title: "Configuración", url: "/settings", icon: Settings }] },
 ];
 
 export function PrivateSidebar({ user, barbershop }: { user: { name: string; email: string }; barbershop?: string }) {
