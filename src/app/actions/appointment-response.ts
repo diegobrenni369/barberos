@@ -4,11 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { respondToAppointment } from "@/lib/appointment-reminders";
+import { allowAppointmentAction } from "@/lib/notifications/public-rate-limit";
 
 export async function appointmentResponse(slug: string, token: string, action: "confirm" | "cancel") {
   if (typeof slug !== "string" || typeof token !== "string" || !["confirm", "cancel"].includes(action)) return { ok: false };
   let ok: boolean;
   try {
+    if (!await allowAppointmentAction(prisma, token)) return { ok: false };
     ok = await respondToAppointment(prisma, slug, token, action);
   } catch {
     return { ok: false };
