@@ -1,7 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { Appointment, Prisma, PrismaClient, ReminderType } from "@prisma/client";
 import { normalizeBookingPhone } from "@/lib/public-booking-input";
-import { utcToZonedParts } from "@/lib/agenda";
 
 export const REMINDER_OFFSETS: Record<ReminderType, number> = {
   FIRST_REMINDER: 24 * 60 * 60_000,
@@ -82,57 +81,7 @@ export async function respondToAppointment(db: PrismaClient, slug: string, token
   });
 }
 
-export type ReminderMessageData = {
-  barbershopName: string; customerName: string; serviceName: string; barberName: string;
-  localDate: string; localStartTime: string; manageUrl: string;
-};
-export interface NotificationSender {
-  // Provider MUST deduplicate this stable key, including after an ambiguous timeout.
-  sendReminder(input: { idempotencyKey: string; phone: string; data: ReminderMessageData }): Promise<{ externalMessageId: string }>;
-}
-export const mockNotificationSender: NotificationSender = {
-  async sendReminder({ idempotencyKey }) {
-    if (process.env.NODE_ENV === "production") throw new Error("MOCK_DISABLED_IN_PRODUCTION");
-    return { externalMessageId: `mock:${idempotencyKey}` };
-  },
-};
-
-export async function processDueReminders(db: PrismaClient, options: { sender?: NotificationSender; now?: Date; baseUrl: string; barbershopId?: string; limit?: number }) {
-  const now = options.now ?? new Date();
-  const sender = options.sender ?? mockNotificationSender;
-  const origin = new URL(options.baseUrl);
-  if (origin.protocol !== "https:" && !(origin.protocol === "http:" && ["localhost", "127.0.0.1"].includes(origin.hostname))) throw new Error("INVALID_PUBLIC_ORIGIN");
-  const due = await db.appointmentReminder.findMany({ where: { status: "SCHEDULED", scheduledFor: { lte: now }, ...(options.barbershopId ? { barbershopId: options.barbershopId } : {}) }, orderBy: [{ scheduledFor: "asc" }, { id: "asc" }], take: Math.min(100, Math.max(1, options.limit ?? 50)) });
-  const result = { sent: 0, cancelled: 0, failed: 0 };
-  for (const reminder of due) {
-    const claim = await db.appointmentReminder.updateMany({ where: { id: reminder.id, status: "SCHEDULED" }, data: { status: "PROCESSING" } });
-    if (!claim.count) continue;
-    try {
-      const outcome = await db.$transaction(async tx => {
-        // Serializes send against rescheduling/cancellation; recheck after lock.
-        await lockAppointment(tx, reminder.appointmentId, reminder.barbershopId);
-        const dispatchTime = options.now ?? new Date();
-        const row = await tx.appointmentReminder.findUniqueOrThrow({ where: { id: reminder.id } });
-        if (row.status !== "PROCESSING") return "cancelled" as const;
-        const a = await tx.appointment.findUniqueOrThrow({ where: { id: reminder.appointmentId, barbershopId: reminder.barbershopId }, include: { customer: true, service: true, barber: true, barbershop: true } });
-        const phone = reminderPhone(a.customer.phone);
-        if (!active(a.status) || a.startsAt <= dispatchTime || a.reminderRevision !== row.revision || !phone || !a.barbershop.isActive
-          || [a.customer, a.service, a.barber].some(item => item.barbershopId !== a.barbershopId) || row.channel !== "WHATSAPP") {
-          await tx.appointmentReminder.update({ where: { id: row.id }, data: { status: "CANCELLED", cancelledAt: dispatchTime } });
-          return "cancelled" as const;
-        }
-        const path = await issueAppointmentAccess(tx, a.barbershopId, a.id, dispatchTime);
-        const local = utcToZonedParts(a.startsAt, a.barbershop.timezone);
-        const sent = await sender.sendReminder({ idempotencyKey: row.id, phone, data: { barbershopName: a.barbershop.name, customerName: a.customer.name, serviceName: a.service.name, barberName: a.barber.name, localDate: local.date, localStartTime: local.time, manageUrl: new URL(path, origin.origin).href } });
-        await tx.appointmentReminder.update({ where: { id: row.id }, data: { status: "SENT", sentAt: dispatchTime, externalMessageId: sent.externalMessageId } });
-        return "sent" as const;
-      }, { timeout: 10_000 });
-      result[outcome]++;
-    } catch {
-      // No automatic retry after an ambiguous send; preserve stable idempotency key.
-      const failed = await db.appointmentReminder.updateMany({ where: { id: reminder.id, status: "PROCESSING" }, data: { status: "FAILED" } });
-      result.failed += failed.count;
-    }
-  }
-  return result;
-}
+// Compatibility exports for existing domain callers/tests; providers stay separate.
+export type { ReminderMessageData, NotificationSender } from "./notifications/types";
+export { mockNotificationSender } from "./notifications/senders";
+export { processDueReminders } from "./notifications/processor";

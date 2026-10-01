@@ -1,5 +1,9 @@
 # Fase 10.1 — Recordatorios y respuesta del cliente
 
+El procesador, proveedor, retries, recuperación, logs y scheduler fueron
+extendidos en [Fase 10.2](reminder-provider.md). Ese documento reemplaza las
+limitaciones operativas de 10.1; el dominio descrito aquí se mantiene.
+
 ## Dominio y migración
 
 Migración aditiva `20260930120000_appointment_reminders`: `AppointmentReminder`,

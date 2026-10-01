@@ -334,12 +334,24 @@ model AppointmentReminder {
   sentAt DateTime?
   cancelledAt DateTime?
   externalMessageId String?
+  provider String?
+  deliveryStatus String?
+  processingStartedAt DateTime?
+  dispatchStartedAt DateTime?
+  claimToken String?
+  attemptCount Int @default(0)
+  lastAttemptAt DateTime?
+  nextAttemptAt DateTime?
+  lastError String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   appointment Appointment @relation(fields: [appointmentId, barbershopId], references: [id, barbershopId], onDelete: Cascade)
 
   @@unique([appointmentId, revision, type, channel])
   @@index([status, scheduledFor])
+  @@index([status, processingStartedAt])
+  @@index([status, nextAttemptAt])
+  @@unique([provider, externalMessageId])
   @@index([barbershopId, appointmentId, status])
 }
 
@@ -351,6 +363,8 @@ model AppointmentPublicAccess {
   tokenHash String @unique
   expiresAt DateTime
   revokedAt DateTime?
+  actionWindowStartedAt DateTime?
+  actionCount Int @default(0)
   createdAt DateTime @default(now())
   appointment Appointment @relation(fields: [appointmentId, barbershopId], references: [id, barbershopId], onDelete: Cascade)
 
