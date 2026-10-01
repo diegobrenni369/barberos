@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { moveAppointmentInTransaction } from "@/lib/move-appointment";
+import { logFailure } from "@/lib/safe-logging";
 
 const schema = z.object({
   id: z.string().min(1), barberId: z.string().min(1),
@@ -38,7 +39,7 @@ export async function moveAppointment(input: unknown) {
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") return { ok: false, error: "La agenda cambió. Intenta nuevamente." };
     if (error instanceof Error && messages[error.message]) return { ok: false, error: messages[error.message] };
-    console.error("Error moving appointment", error);
+    logFailure("appointment_move_failed");
     return { ok: false, error: "No se pudo mover la reserva. Intenta nuevamente." };
   }
   revalidatePath("/dashboard"); revalidatePath("/agenda");

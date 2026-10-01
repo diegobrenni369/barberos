@@ -5,7 +5,10 @@ import { readNotificationConfig } from "./config";
 
 export async function runReminderProcessor(db: PrismaClient) {
   const config = readNotificationConfig();
-  return processDueReminders(db, { config });
+  await db.$executeRaw`DELETE FROM "PublicRateLimit" WHERE "key" IN (SELECT "key" FROM "PublicRateLimit" WHERE "expiresAt" < CURRENT_TIMESTAMP - INTERVAL '1 day' LIMIT 1000)`;
+  const result = await processDueReminders(db, { config });
+  console.info(JSON.stringify({ event: "reminder_run", finishedAt: new Date().toISOString(), ...result }));
+  return result;
 }
 export async function handleReminderCron(request: Request, secret: string | undefined, run: () => Promise<unknown>) {
   const supplied = request.headers.get("authorization") ?? "";

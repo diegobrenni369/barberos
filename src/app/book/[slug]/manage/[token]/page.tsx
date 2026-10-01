@@ -2,12 +2,15 @@ import { prisma } from "@/lib/prisma";
 import { findPublicAppointment } from "@/lib/appointment-reminders";
 import { utcToZonedParts } from "@/lib/agenda";
 import { ManageAppointment } from "@/components/booking/manage-appointment";
+import { headers } from "next/headers";
+import { allowPublicRequest } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Tu reserva | BarberOS", robots: { index: false, follow: false }, referrer: "no-referrer" as const };
 
 export default async function ManagePage({ params }: { params: Promise<{ slug: string; token: string }> }) {
   const { slug, token } = await params;
+  if (!await allowPublicRequest(prisma, await headers(), "manage")) return <main className="mx-auto max-w-lg p-6"><h1 className="text-xl font-semibold">Espera un momento</h1><p>Demasiadas consultas. Vuelve a intentar en un minuto.</p></main>;
   const appointment = await findPublicAppointment(prisma, slug, token);
   const date = appointment ? new Intl.DateTimeFormat("es-CL", { timeZone: appointment.barbershop.timezone, weekday: "long", day: "numeric", month: "long" }).format(appointment.startsAt) : "";
   const time = appointment ? `${utcToZonedParts(appointment.startsAt, appointment.barbershop.timezone).time} – ${utcToZonedParts(appointment.endsAt, appointment.barbershop.timezone).time}` : "";

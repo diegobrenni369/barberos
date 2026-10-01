@@ -5,11 +5,14 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { respondToAppointment } from "@/lib/appointment-reminders";
 import { allowAppointmentAction } from "@/lib/notifications/public-rate-limit";
+import { headers } from "next/headers";
+import { allowPublicRequest } from "@/lib/rate-limit";
 
 export async function appointmentResponse(slug: string, token: string, action: "confirm" | "cancel") {
   if (typeof slug !== "string" || typeof token !== "string" || !["confirm", "cancel"].includes(action)) return { ok: false };
   let ok: boolean;
   try {
+    if (!await allowPublicRequest(prisma, await headers(), "manage")) return { ok: false };
     if (!await allowAppointmentAction(prisma, token)) return { ok: false };
     ok = await respondToAppointment(prisma, slug, token, action);
   } catch {

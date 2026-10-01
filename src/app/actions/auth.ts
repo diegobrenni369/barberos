@@ -4,8 +4,11 @@ import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { registerSchema } from "@/lib/validations";
+import { headers } from "next/headers";
+import { allowPublicRequest } from "@/lib/rate-limit";
 
 export async function register(formData: FormData) {
+  if (!await allowPublicRequest(prisma, await headers(), "register")) redirect("/register?error=Demasiados intentos. Espera un minuto.");
   const parsed = registerSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`/register?error=${encodeURIComponent(parsed.error.issues[0].message)}`);
   const exists = await prisma.user.findUnique({ where: { email: parsed.data.email } });
