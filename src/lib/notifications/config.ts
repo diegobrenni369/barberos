@@ -13,7 +13,7 @@ function numberSetting(env: Record<string, string | undefined>, key: string, fal
 export function readNotificationConfig(env: Record<string, string | undefined> = process.env): NotificationConfig {
   const provider = env.NOTIFICATION_PROVIDER || (env.NODE_ENV === "production" ? "" : "mock");
   if (provider !== "mock" && provider !== "twilio") throw new NotificationConfigurationError("NOTIFICATION_PROVIDER");
-  const rawUrl = env.REMINDER_PUBLIC_BASE_URL || (env.NODE_ENV !== "production" ? "http://localhost:3000" : "");
+  const rawUrl = env.REMINDER_PUBLIC_BASE_URL || env.APP_URL || env.NEXT_PUBLIC_APP_URL || (env.NODE_ENV !== "production" ? "http://localhost:3000" : "");
   let base: URL;
   try { base = new URL(rawUrl); } catch { throw new NotificationConfigurationError("REMINDER_PUBLIC_BASE_URL"); }
   if (base.username || base.password || base.search || base.hash || base.pathname !== "/" || (base.protocol !== "https:" && !(env.NODE_ENV !== "production" && base.protocol === "http:" && ["localhost", "127.0.0.1"].includes(base.hostname)))) throw new NotificationConfigurationError("REMINDER_PUBLIC_BASE_URL");

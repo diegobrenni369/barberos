@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
+  if (process.env.NODE_ENV === "production" || !["localhost", "127.0.0.1", "[::1]"].includes(new URL(process.env.DATABASE_URL || "").hostname)) throw new Error("Demo seed is restricted to a local development database");
   const passwordHash = await bcrypt.hash("barberos-demo", 12);
   const user = await prisma.user.upsert({
     where: { email: "owner@barberos.local" },

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { CheckoutError, registerCheckout } from "@/lib/checkout";
+import { logFailure } from "@/lib/safe-logging";
 
 export async function checkoutAppointment(input: unknown): Promise<{ ok: true; saleId: string } | { ok: false; error: string }> {
   const membership = await requireRole("OWNER");
@@ -14,7 +15,7 @@ export async function checkoutAppointment(input: unknown): Promise<{ ok: true; s
     return { ok: true, saleId };
   } catch (error) {
     if (error instanceof CheckoutError) return { ok: false, error: error.message };
-    console.error("Checkout failed", error);
+    logFailure("checkout_failed");
     return { ok: false, error: "No se pudo confirmar el cobro. Actualiza la agenda antes de reintentar." };
   }
 }
