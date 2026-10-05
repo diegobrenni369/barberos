@@ -67,6 +67,10 @@ model User {
 }
 
 model Barbershop {
+  logoUrl String?
+  coverImageUrl String?
+  publicDescription String?
+  instagramUrl String?
   id             String                   @id @default(cuid())
   name           String
   slug           String                   @unique
@@ -123,6 +127,7 @@ enum AppointmentSource {
 }
 
 model Service {
+  publicImageUrl String?
   id              String        @id @default(cuid())
   barbershopId    String
   name            String
@@ -159,6 +164,7 @@ model BarbershopMembership {
 }
 
 model Barber {
+  publicImageUrl String?
   id             String               @id @default(cuid())
   barbershopId   String
   userId         String?
