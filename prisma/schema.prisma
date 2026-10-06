@@ -64,6 +64,20 @@ model User {
   updatedAt      DateTime               @updatedAt
   memberships    BarbershopMembership[]
   barberProfiles Barber[]
+  mobileSessions MobileSession[]
+}
+
+model MobileSession {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Barbershop {
