@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../lib/auth";
+import { useSelectedBarber } from "../../lib/selected-barber";
 import { ApiError } from "../../lib/api";
 import { type AgendaData, type MobileAppointment, moveDate, todayIn } from "../../lib/agenda";
 import { Avatar, Button, Card, EmptyState, colors, styles } from "../../components/ui";
-import { Chevron } from "../../components/chevron";
+import { Check, Chevron } from "../../components/chevron";
 import { AgendaTimeline } from "../../components/agenda-timeline";
 import { AppointmentSheet } from "../../components/appointment-sheet";
 import { AgendaCreate, type CreateMode } from "../../components/agenda-create";
@@ -14,7 +15,7 @@ export default function Agenda() {
   const { session, logout, get } = useAuth();
   const timezone = session?.barbershop.timezone ?? "America/Santiago";
   const [date, setDate] = useState(() => todayIn(timezone));
-  const [barberId, setBarberId] = useState<string | null>(null);
+  const { barberId, setBarberId } = useSelectedBarber();
   const [data, setData] = useState<AgendaData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -41,7 +42,7 @@ export default function Agenda() {
     let active = true;
     setLoading(true); setError("");
     void get<AgendaData>(`/api/mobile/agenda?date=${date}${barberId ? `&barberId=${encodeURIComponent(barberId)}` : ""}`).then(result => {
-      if (active) setData(result);
+      if (active) { setData(result); if (!barberId) setBarberId(result.barberId); }
     }).catch(failure => {
       if (!active) return;
       if (failure instanceof ApiError && failure.status === 404 && barberId) {
@@ -49,7 +50,7 @@ export default function Agenda() {
       } else setError("No se pudo cargar la agenda.");
     }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [date, barberId, retry, get]);
+  }, [date, barberId, retry, get, setBarberId]);
   async function signOut() {
     setBusy(true); setLogoutError("");
     try { await logout(); } catch { setLogoutError("No se pudo cerrar sesión. Intenta nuevamente."); }
@@ -92,7 +93,7 @@ export default function Agenda() {
     <Modal visible={picker} animationType="slide" onRequestClose={() => setPicker(false)}>
       <SafeAreaView style={styles.screen}><ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Profesional</Text>
-        {data?.barbers.map(barber => <Pressable key={barber.id} accessibilityRole="button" accessibilityState={{ selected: selected?.id === barber.id }} onPress={() => { setBarberId(barber.id); setPicker(false); }} style={[styles.card, { flexDirection: "row", alignItems: "center" }]}><Avatar name={barber.name} /><Text style={[styles.label, { flex: 1 }]}>{barber.name}</Text>{selected?.id === barber.id && <Text>✓</Text>}</Pressable>)}
+        {data?.barbers.map(barber => <Pressable key={barber.id} accessibilityRole="button" accessibilityState={{ selected: selected?.id === barber.id }} onPress={() => { setBarberId(barber.id); setPicker(false); }} style={[styles.card, { flexDirection: "row", alignItems: "center" }]}><Avatar name={barber.name} /><Text style={[styles.label, { flex: 1 }]}>{barber.name}</Text>{selected?.id === barber.id && <Check />}</Pressable>)}
         <Button title="Cerrar" secondary onPress={() => setPicker(false)} />
       </ScrollView></SafeAreaView>
     </Modal>
