@@ -21,19 +21,37 @@ export async function resolveMobileSession(request: Request) {
 }
 
 export async function mobileMembership(userId: string) {
-  // Same default membership as web. M0/M1 intentionally supports OWNER only.
+  // Keep the same default tenant as web; never choose a tenant from request input.
   const member = await prisma.barbershopMembership.findFirst({
     where: { userId }, orderBy: { createdAt: "asc" },
     select: { role: true, barbershopId: true, barbershop: { select: { id: true, name: true, isActive: true, timezone: true } } },
   });
-  return member?.role === "OWNER" && member.barbershop.isActive ? member : null;
+  if (!member?.barbershop.isActive) return null;
+  if (member.role === "OWNER") return { ...member, barberId: null, barberName: null };
+  if (member.role !== "BARBER") return null;
+  const barbers = await prisma.barber.findMany({ where: { userId, barbershopId: member.barbershopId }, select: { id: true, name: true, isActive: true }, take: 2 });
+  // Ambiguous, missing or disabled associations fail closed.
+  if (barbers.length !== 1 || !barbers[0].isActive) return null;
+  return { ...member, barberId: barbers[0].id, barberName: barbers[0].name };
 }
 
 export async function resolveMobileAccess(request: Request) {
   const session = await resolveMobileSession(request);
   if (!session) return null;
   const membership = await mobileMembership(session.userId);
-  return membership ? { session, user: session.user, membership } : null;
+  return membership ? { session, user: session.user, membership, userId: session.userId, barbershopId: membership.barbershopId, role: membership.role, barberId: membership.barberId } : null;
+}
+
+export type MobileAccess = NonNullable<Awaited<ReturnType<typeof resolveMobileAccess>>>;
+export function mobileBarberScope(access: MobileAccess) {
+  return access.role === "BARBER" ? { barberId: access.barberId! } : {};
+}
+export function mobileBarberInput(access: MobileAccess, raw: unknown): unknown {
+  if (access.role !== "BARBER" || typeof raw !== "object" || !raw || Array.isArray(raw)) return raw;
+  return { ...raw, barberId: access.barberId };
+}
+export function mobileIdentity(member: NonNullable<Awaited<ReturnType<typeof mobileMembership>>>) {
+  return { role: member.role, barberId: member.barberId, barberName: member.barberName };
 }
 
 export function mobileResponse(body: unknown, status = 200) {

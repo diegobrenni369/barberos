@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { mobileResponse, resolveMobileAccess } from "@/lib/mobile-auth";
+import { mobileResponse, resolveMobileAccess, mobileBarberInput } from "@/lib/mobile-auth";
 import { commissionPeriod, getCommissions, SettlementError } from "@/lib/commissions";
 import { utcToZonedParts } from "@/lib/agenda";
 
@@ -11,9 +11,9 @@ export async function GET(request: Request) {
   try {
     const access = await resolveMobileAccess(request);
     if (!access) return mobileResponse({ error: "Sesión no válida." }, 401);
-    const query = input.parse(Object.fromEntries(new URL(request.url).searchParams));
+    const query = input.parse(mobileBarberInput(access, Object.fromEntries(new URL(request.url).searchParams)));
     const { barbershopId, barbershop } = access.membership;
-    const barber = await prisma.barber.findFirst({ where: { id: query.barberId, barbershopId }, select: { id: true, name: true } });
+    const barber = await prisma.barber.findFirst({ where: { id: query.barberId, barbershopId, isActive: true }, select: { id: true, name: true } });
     if (!barber) return mobileResponse({ error: "Profesional no encontrado." }, 404);
     const today = utcToZonedParts(new Date(), barbershop.timezone).date;
     let start = query.from, end = query.to;
