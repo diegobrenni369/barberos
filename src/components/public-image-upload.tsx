@@ -1,4 +1,5 @@
 "use client";
+import { toast } from "sonner";
 
 import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -25,8 +26,8 @@ export function PublicImageUpload({ target, recordId, initialUrl, label }: { tar
       const response = await fetch(`/api/public-images?${params}`, { method: "POST", headers: file ? { "Content-Type": file.type } : { "x-remove-image": "true" }, body: file });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "No se pudo guardar la imagen.");
-      setUrl(result.url); setMessage(file ? "Imagen guardada." : "Imagen quitada."); router.refresh();
-    } catch (failure) { setError(true); setMessage(failure instanceof Error ? failure.message : "No se pudo subir la imagen."); }
+      setUrl(result.url); toast.success(file ? "Imagen guardada." : "Imagen eliminada."); router.refresh();
+    } catch { toast.error("No se pudo guardar la imagen. Intenta nuevamente."); }
     finally { setBusy(false); }
   }
   return <div className="min-w-0 space-y-2">

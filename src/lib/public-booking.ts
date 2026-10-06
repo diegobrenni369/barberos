@@ -1,4 +1,5 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
+import { customerEnrichment } from "@/lib/customer-matching";
 import { syncAppointmentReminders } from "@/lib/appointment-reminders";
 import { dayRangeUtc, utcToZonedParts, zonedDateTimeToUtc } from "@/lib/agenda";
 import { dayOfWeekForDate, minuteToTime, ensureBarberAvailable, ensureNoBarberBreak, ensureNoBarberBlock } from "@/lib/barber-availability";
@@ -89,14 +90,18 @@ export async function confirmPublicBooking(db: PrismaClient, raw: unknown, now =
         if (!selected) throw new PublicBookingError(SLOT_TAKEN);
         const digits = input.phone.slice(1);
         const local = digits.startsWith("56") && digits.length === 11 ? digits.slice(2) : digits;
-        // Match existing formatted phones without altering unverified customer data.
+        // Match formatted phones within this tenant, regardless of the submitted name.
         // Values are parameterized; lookup is always scoped to the resolved tenant.
-        const matches = await tx.$queryRaw<{ id: string }[]>`
-          SELECT "id" FROM "Customer"
-          WHERE "barbershopId" = ${day.shop.id} AND "isActive" = true
-            AND regexp_replace("phone", '[^0-9]', '', 'g') IN (${digits}, ${local}, ${`00${digits}`})
+        const matches = await tx.$queryRaw<{ id: string; name: string; email: string | null }[]>`
+          SELECT "id", "name", "email" FROM "Customer"
+          WHERE "barbershopId" = ${day.shop.id}
+            AND regexp_replace(regexp_replace("phone", '[^0-9]', '', 'g'), '^00', '') IN (${digits}, ${local})
           ORDER BY "createdAt", "id" LIMIT 1
         `;
+        if (matches[0]) {
+          const enrichment = customerEnrichment(matches[0], input);
+          if (Object.keys(enrichment).length) await tx.customer.updateMany({ where: { id: matches[0].id, barbershopId: day.shop.id }, data: enrichment });
+        }
         const customer = matches[0] ?? await tx.customer.create({ data: { barbershopId: day.shop.id, name: input.name, phone: input.phone, email: input.email || null }, select: { id: true } });
         const appointment = await tx.appointment.create({ data: {
           barbershopId: day.shop.id, customerId: customer.id, barberId: selected.barber.id, serviceId: day.service.id,

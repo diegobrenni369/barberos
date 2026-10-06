@@ -9,20 +9,39 @@ import { serviceSchema } from "@/lib/validations";
 import { setServiceBarbers } from "@/lib/barber-service";
 import { z } from "zod";
 
-function fail(message: string): never { redirect(`/services?error=${encodeURIComponent(message)}`); }
+function fail(message: string, path = "/services"): never { redirect(`${path}?error=${encodeURIComponent(message)}`); }
 
 async function saveService(formData: FormData, editing: boolean) {
   const membership = await requireRole(MembershipRole.OWNER);
-  const parsed = serviceSchema.safeParse(Object.fromEntries(formData));
-  const selection = z.array(z.string().min(1).max(128)).max(1000).safeParse(formData.getAll("barberIds"));
-  if (!parsed.success) fail(parsed.error.issues[0].message);
-  if (!selection.success) fail("Selecciona profesionales válidos.");
-  const data = parsed.data;
-  const values = { name: data.name, description: data.description || null, durationMinutes: data.durationMinutes, price: new Prisma.Decimal(data.price), isActive: data.isActive, isOnlineBookingEnabled: data.isOnlineBookingEnabled, onlinePaymentPolicy: data.onlinePaymentPolicy, depositAmount: data.onlinePaymentPolicy === "DEPOSIT" && data.depositAmount ? new Prisma.Decimal(data.depositAmount) : null };
+  const section = formData.get("section");
+  const sectionEdit = editing && ["information", "professionals", "online"].includes(String(section));
+  const serviceId = String(formData.get("id") ?? "");
+  const path = sectionEdit && z.string().cuid().safeParse(serviceId).success ? `/services/${serviceId}` : "/services";
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       await prisma.$transaction(async tx => {
-        let id = String(formData.get("id") ?? "");
+        let id = serviceId;
+        const submitted = Object.fromEntries(formData);
+        let fields = submitted;
+        let barberIds = formData.getAll("barberIds");
+        if (sectionEdit) {
+          const current = await tx.service.findFirst({ where: { id, barbershopId: membership.barbershopId }, include: { barberServices: { where: { barbershopId: membership.barbershopId, barber: { isActive: true } }, select: { barberId: true } } } });
+          if (!current) throw new Error("Servicio no encontrado");
+          const keys = section === "information" ? ["name", "description", "durationMinutes", "price", "isActive"] : section === "online" ? ["isOnlineBookingEnabled", "onlinePaymentPolicy", "depositAmount"] : [];
+          fields = {
+            name: current.name, description: current.description || "", durationMinutes: String(current.durationMinutes), price: current.price.toString(),
+            isActive: String(current.isActive), isOnlineBookingEnabled: String(current.isOnlineBookingEnabled),
+            onlinePaymentPolicy: current.onlinePaymentPolicy, depositAmount: current.depositAmount?.toString() || "",
+            ...Object.fromEntries(keys.map(key => [key, submitted[key] ?? ""])),
+          };
+          if (section !== "professionals") barberIds = current.barberServices.map(link => link.barberId);
+        }
+        const parsed = serviceSchema.safeParse(fields);
+        const selection = z.array(z.string().min(1).max(128)).max(1000).safeParse(barberIds);
+        if (!parsed.success) throw new Error(parsed.error.issues[0].message);
+        if (!selection.success) throw new Error("Selecciona profesionales válidos.");
+        const data = parsed.data;
+        const values = { name: data.name, description: data.description || null, durationMinutes: data.durationMinutes, price: new Prisma.Decimal(data.price), isActive: data.isActive, isOnlineBookingEnabled: data.isOnlineBookingEnabled, onlinePaymentPolicy: data.onlinePaymentPolicy, depositAmount: data.onlinePaymentPolicy === "DEPOSIT" && data.depositAmount ? new Prisma.Decimal(data.depositAmount) : null };
         if (editing) {
           const result = await tx.service.updateMany({ where: { id, barbershopId: membership.barbershopId }, data: values });
           if (!result.count) throw new Error("Servicio no encontrado");
@@ -35,13 +54,13 @@ async function saveService(formData: FormData, editing: boolean) {
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === "P2034" && attempt < 2) continue;
-        fail("La configuración cambió. Intenta nuevamente.");
+        fail("La configuración cambió. Intenta nuevamente.", path);
       }
-      if (error instanceof Error) fail(error.message);
+      if (error instanceof Error) fail(error.message, path);
       throw error;
     }
   }
-  revalidatePath("/services"); revalidatePath("/agenda"); revalidatePath("/book/[slug]", "page"); redirect("/services");
+  revalidatePath("/services"); revalidatePath("/agenda"); revalidatePath("/book/[slug]", "page"); if (editing) revalidatePath(`/services/${serviceId}`); redirect(sectionEdit ? `${path}?success=Servicio+actualizado.` : "/services");
 }
 export async function createService(formData: FormData) { return saveService(formData, false); }
 export async function updateService(formData: FormData) { return saveService(formData, true); }
@@ -60,5 +79,5 @@ export async function toggleService(formData: FormData) {
     if (error instanceof Error) fail(error.message);
     throw error;
   }
-  revalidatePath("/services"); revalidatePath("/agenda"); revalidatePath("/book/[slug]", "page");
+  revalidatePath("/services"); revalidatePath(`/services/${id}`); revalidatePath("/agenda"); revalidatePath("/book/[slug]", "page");
 }

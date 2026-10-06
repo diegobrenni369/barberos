@@ -1,6 +1,7 @@
 "use client";
+import { toast } from "sonner";
 
-import { createContext, useContext, useRef, useState, useTransition, type ReactNode } from "react";
+import { createContext, useContext, useRef, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { DragDropProvider, DragOverlay, useDroppable, useDragOperation } from "@dnd-kit/react";
 import { PointerSensor, PointerActivationConstraints } from "@dnd-kit/dom";
@@ -24,16 +25,14 @@ const sensors = [PointerSensor.configure({
 export function AppointmentDragProvider({ children, date, appointments, services }: { children: ReactNode; date: string; appointments: AppointmentData[]; services: ServiceOption[] }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [message, setMessage] = useState("");
   const lock = useRef(false);
   return <ServiceEligibility.Provider value={services}><DragPending.Provider value={pending}><DragDropProvider sensors={sensors}
-    onDragStart={() => setMessage("")}
     onDragEnd={event => {
       if (event.canceled || lock.current) return;
       const { source, target } = event.operation;
       const appointment = appointments.find(item => item.id === source?.id);
       if (!appointment) return;
-      if (!target || target.data.valid !== true) { setMessage(target?.data.eligible === false ? "Este profesional no realiza este servicio." : "No disponible en ese horario. La reserva no se movió."); return; }
+      if (!target || target.data.valid !== true) { if (target?.data.eligible === false) toast.warning("Este profesional no realiza este servicio."); else toast.error("No disponible en ese horario. La reserva no se movió."); return; }
       const barberId = target.data.barberId;
       const minute = target.data.minute;
       if (typeof barberId !== "string" || typeof minute !== "number") return;
@@ -43,10 +42,10 @@ export function AppointmentDragProvider({ children, date, appointments, services
       startTransition(async () => {
         try {
           const result = await moveAppointment({ id: appointment.id, barberId, date, time, expectedUpdatedAt: appointment.updatedAt });
-          setMessage(result.ok ? "" : result.error ?? "No se pudo mover la reserva.");
+          if (!result.ok) toast.error(result.error ?? "No se pudo mover la reserva.");
           router.refresh();
         } catch {
-          setMessage("No se pudo confirmar el movimiento. Actualizando la agenda…");
+          toast.error("No se pudo confirmar el movimiento. Actualizando la agenda…");
           router.refresh();
         } finally { lock.current = false; }
       });
@@ -56,7 +55,6 @@ export function AppointmentDragProvider({ children, date, appointments, services
       const item = appointments.find(appointment => appointment.id === source.id);
       return item ? <div className="pointer-events-none rounded-md border bg-card/90 px-3 py-2 text-xs shadow-sm"><p className="truncate font-medium">{item.customerName}</p><p className="text-muted-foreground">{item.serviceName} · {item.durationMinutes} min</p></div> : null;
     }}</DragOverlay>
-    {(message || pending) && <p role="status" className="fixed bottom-4 left-1/2 z-[60] max-w-[90vw] -translate-x-1/2 rounded-lg border bg-popover px-4 py-2 text-sm shadow-sm">{pending ? "Guardando movimiento…" : message}</p>}
   </DragDropProvider></DragPending.Provider></ServiceEligibility.Provider>;
 }
 

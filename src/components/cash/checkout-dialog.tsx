@@ -1,4 +1,5 @@
 "use client";
+import { toast } from "sonner";
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -16,7 +17,6 @@ export function CheckoutDialog({ appointment, barberName, onClose }: { appointme
   const router = useRouter();
   const [discount, setDiscount] = useState("0");
   const [method, setMethod] = useState<CashPaymentMethod | null>(null);
-  const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
   const submitting = useRef(false);
   const currency = appointment.currency;
@@ -30,14 +30,14 @@ export function CheckoutDialog({ appointment, barberName, onClose }: { appointme
     event.preventDefault();
     if (submitting.current || !valid || !method) return;
     submitting.current = true;
-    setError("");
     startTransition(async () => {
       try {
         const result = await checkoutAppointment({ appointmentId: appointment.id, expectedUpdatedAt: appointment.updatedAt, discountAmount: discount, method });
-        if (!result.ok) { setError(result.error); return; }
+        if (!result.ok) { toast.error(result.error); return; }
+        toast.success("Cobro registrado.");
         router.refresh();
         onClose();
-      } catch { setError("No se pudo confirmar el pago. Actualiza la agenda antes de reintentar."); }
+      } catch { toast.error("No se pudo confirmar el pago. Actualiza la agenda antes de reintentar."); }
       finally { submitting.current = false; }
     });
   }
@@ -53,7 +53,7 @@ export function CheckoutDialog({ appointment, barberName, onClose }: { appointme
         <div className="space-y-2"><div className="flex items-center justify-between gap-4"><Label htmlFor="checkout-discount">Descuento ({currency})</Label><Input id="checkout-discount" className="w-32 shrink-0 text-right tabular-nums" inputMode="numeric" value={discount} onChange={event => setDiscount(event.target.value)} disabled={pending} aria-invalid={!valid} /></div>{!valid && <p className="text-xs text-destructive">Usa pesos enteros entre cero y el subtotal.</p>}</div>
         <div className="flex items-center justify-between border-t pt-3 text-lg font-semibold"><span>Total</span><span className="tabular-nums">{total === null ? "—" : formatMoney(total, currency)}</span></div>
         <div className="space-y-2"><Label id="checkout-method-label">Método de pago</Label><Select value={method} onValueChange={value => setMethod(value)} disabled={pending}><SelectTrigger aria-labelledby="checkout-method-label" className="w-full"><SelectValue placeholder="Seleccionar método" /></SelectTrigger><SelectContent>{Object.entries(paymentMethods).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select></div>
-        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+
         <DialogFooter><Button type="button" variant="outline" onClick={onClose} disabled={pending}>Cancelar</Button><Button type="submit" disabled={pending || !valid || !method}>{pending ? "Registrando…" : "Registrar pago"}</Button></DialogFooter>
       </form>
     </DialogContent>
