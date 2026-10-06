@@ -1,11 +1,10 @@
 import { MembershipRole } from "@prisma/client";
-import bcrypt from "bcryptjs";
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { loginSchema } from "@/lib/validations";
+import { validateCredentials } from "@/lib/credentials";
 import { allowPublicRequest } from "@/lib/rate-limit";
 import { logFailure } from "@/lib/safe-logging";
 
@@ -21,11 +20,7 @@ export const authOptions: NextAuthOptions = {
       const requestHeaders = new Headers();
       for (const [key, value] of Object.entries(request.headers || {})) if (typeof value === "string") requestHeaders.set(key, value);
       if (!await allowPublicRequest(prisma, requestHeaders, "login")) return null;
-      const parsed = loginSchema.safeParse(credentials);
-      if (!parsed.success) return null;
-      const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
-      if (!user || !(await bcrypt.compare(parsed.data.password, user.passwordHash))) return null;
-      return { id: user.id, name: user.name, email: user.email };
+      return validateCredentials(credentials);
     },
   })],
   callbacks: {
