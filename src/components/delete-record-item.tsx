@@ -1,4 +1,5 @@
 "use client";
+import { toast } from "sonner";
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -20,15 +21,15 @@ export function DeleteRecordItem({ kind, id, name }: { kind: "customer" | "barbe
       <AlertDialogContent initialFocus={cancel}>
         <AlertDialogTitle className="text-base font-semibold">¿Eliminar este {label}?</AlertDialogTitle>
         <AlertDialogDescription className="text-muted-foreground">{name}. Esta acción no se puede deshacer. Si tiene actividad o relaciones vinculadas, deberás desactivarlo.</AlertDialogDescription>
-        {error && <p role="alert" className="text-destructive">{error}</p>}
+
         <div className="flex justify-end gap-2">
           <AlertDialogCancel render={<Button ref={cancel} type="button" variant="outline" disabled={pending} />}>Cancelar</AlertDialogCancel>
           <Button type="button" variant="destructive" disabled={pending || Boolean(error)} onClick={() => startTransition(async () => {
             try {
               const result = await deleteRecord({ kind, id });
-              if (!result.ok) { setError(result.error || "No se pudo eliminar."); return; }
+              if (!result.ok) { setError(result.error || "No se pudo eliminar."); toast.error(result.error || "No se pudo eliminar."); return; }
               setOpen(false); router.refresh();
-            } catch { setError("No se pudo eliminar. Comprueba el listado antes de reintentar."); }
+            } catch { setError("No se pudo eliminar."); toast.error("No se pudo eliminar. Comprueba el listado antes de reintentar."); }
           })}>{pending ? "Eliminando…" : "Eliminar"}</Button>
         </div>
       </AlertDialogContent>

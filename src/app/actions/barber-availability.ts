@@ -88,7 +88,7 @@ export async function createBarberBlock(formData: FormData) {
     if (error instanceof Error && (error.message === "ACTIVE_APPOINTMENT" || (error as { code?: string }).code === "P2034")) agendaFail(data.date, "No se puede bloquear un horario con reservas activas");
     throw error;
   }
-  revalidatePath("/agenda"); revalidatePath(`/barbers/${data.barberId}`); redirect(`/agenda?date=${data.date}`);
+  revalidatePath("/agenda"); revalidatePath(`/barbers/${data.barberId}`); redirect(`/agenda?date=${data.date}&success=Bloqueo+guardado.`);
 }
 
 export async function updateBarberBlock(formData: FormData) {
@@ -105,7 +105,7 @@ export async function updateBarberBlock(formData: FormData) {
     if (error instanceof Error && (error.message === "ACTIVE_APPOINTMENT" || (error as { code?: string }).code === "P2034")) agendaFail(data.date, "No se puede bloquear un horario con reservas activas");
     throw error;
   }
-  revalidatePath("/agenda"); revalidatePath(`/barbers/${data.barberId}`); redirect(`/agenda?date=${data.date}`);
+  revalidatePath("/agenda"); revalidatePath(`/barbers/${data.barberId}`); redirect(`/agenda?date=${data.date}&success=Bloqueo+guardado.`);
 }
 
 export async function deleteBarberBlock(formData: FormData) {

@@ -66,7 +66,7 @@ export async function createAppointment(formData: FormData) {
     if (error instanceof Error && (error.message === "APPOINTMENT_OVERLAP" || (error as { code?: string }).code === "P2034")) fail(data.date, "Ese horario ya está ocupado para el barbero seleccionado");
     throw error;
   }
-  revalidatePath("/dashboard"); revalidatePath("/agenda"); redirect(`/agenda?date=${data.date}`);
+  revalidatePath("/dashboard"); revalidatePath("/agenda"); redirect(`/agenda?date=${data.date}&success=Reserva+creada.`);
 }
 
 export async function updateAppointment(formData: FormData) {

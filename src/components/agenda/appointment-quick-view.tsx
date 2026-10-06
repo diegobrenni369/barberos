@@ -1,4 +1,5 @@
 "use client";
+import { toast } from "sonner";
 
 import { useState, useTransition } from "react";
 import { CheckoutDialog } from "@/components/cash/checkout-dialog";
@@ -16,7 +17,6 @@ export function AppointmentQuickView({ appointment, barberName, onClose, onEdit 
   const [pending, startTransition] = useTransition();
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [saleDetail, setSaleDetail] = useState<Awaited<ReturnType<typeof getAppointmentSale>>>(null);
-  const [saleError, setSaleError] = useState("");
   const canCharge = appointment.canCharge && !appointment.sale && ["SCHEDULED", "CONFIRMED", "COMPLETED"].includes(appointment.status);
   const actions = appointment.status === "SCHEDULED"
     ? [{ status: "CONFIRMED", label: "Confirmar" }, { status: "NO_SHOW", label: "No asistió" }, { status: "CANCELLED", label: "Cancelar reserva" }]
@@ -41,14 +41,12 @@ export function AppointmentQuickView({ appointment, barberName, onClose, onEdit 
         {appointment.customerConfirmedAt && <p className="text-xs text-muted-foreground">Cliente confirmó asistencia</p>}
         {appointment.sale && <p className="text-xs text-muted-foreground">{appointment.sale.paymentLabel}{appointment.sale.method && <> · {paymentMethods[appointment.sale.method]}</>} · {formatMoney(appointment.sale.total, appointment.sale.currency)}</p>}
         {appointment.sale && appointment.canCharge && <Button variant="outline" disabled={pending} onClick={() => startTransition(async () => {
-          setSaleError("");
           try {
             const detail = await getAppointmentSale(appointment.id);
             if (detail) setSaleDetail(detail);
-            else setSaleError("No se encontró la venta.");
-          } catch { setSaleError("No se pudo cargar la venta. Intenta nuevamente."); }
+            else toast.error("No se encontró la venta.");
+          } catch { toast.error("No se pudo cargar la venta. Intenta nuevamente."); }
         })}>Ver venta</Button>}
-        {saleError && <p role="alert" className="text-xs text-destructive">{saleError}</p>}
         {saleDetail && <SaleDetails sale={saleDetail.sale} timezone={saleDetail.timezone} onClose={() => setSaleDetail(null)} />}
         {canCharge && <Button className="w-full" onClick={() => setCheckoutOpen(true)}>Cobrar</Button>}
         {canCharge && appointment.status === "COMPLETED" && <p className="text-xs text-muted-foreground">Atención completada sin cobro registrado.</p>}

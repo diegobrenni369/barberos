@@ -1,3 +1,4 @@
+import { OperationFeedback } from "@/components/operation-feedback";
 import { getSalePaymentLabel } from "@/lib/sale-balance";
 import { AgendaWorkspace } from "@/components/agenda/agenda-workspace";
 import { dayRangeUtc, utcToZonedParts } from "@/lib/agenda";
@@ -11,7 +12,7 @@ function validDate(value?: string) {
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
 }
 
-export default async function AgendaPage({ searchParams }: { searchParams: Promise<{ date?: string; error?: string; cancelled?: string }> }) {
+export default async function AgendaPage({ searchParams }: { searchParams: Promise<{ date?: string; error?: string; success?: string; cancelled?: string }> }) {
   const membership = await requireBarbershopAccess(); const params = await searchParams;
   const timezone = membership.barbershop.timezone; const now = new Date(); const todayParts = utcToZonedParts(now, timezone);
   const date = validDate(params.date) ? params.date! : todayParts.date; const showCancelled = params.cancelled === "true"; const range = dayRangeUtc(date, timezone); const dayOfWeek = dayOfWeekForDate(date);
@@ -32,5 +33,5 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
   const recurringBreaks = barbers.flatMap((barber) => barber.breaks.filter((item) => item.dayOfWeek === dayOfWeek).map((item) => ({ id: item.id, barberId: barber.id, startMinute: item.startMinute, endMinute: item.endMinute, label: item.label?.trim() || "Descanso" })));
   const currentMinutes = todayParts.hour * 60 + todayParts.minute;
   const nowMinutes = businessHour && !businessHour.isClosed && date === todayParts.date && currentMinutes >= businessHour.opensMinute && currentMinutes <= businessHour.closesMinute ? currentMinutes : null;
-  return <section aria-label="Agenda" className="flex min-h-0 flex-1 flex-col">{params.error && <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{params.error}</p>}<AgendaWorkspace dateLabel={titleDate.charAt(0).toUpperCase() + titleDate.slice(1)} isClosed={!businessHour || businessHour.isClosed} date={date} today={todayParts.date} showCancelled={showCancelled} nowMinutes={nowMinutes} startMinute={businessHour?.opensMinute ?? 0} endMinute={businessHour?.closesMinute ?? 0} barbers={barbers.map(({ id, name }) => ({ id, name }))} customers={customers} services={services.map(({ barberServices, ...item }) => ({ ...item, barberIds: barberServices.map(link => link.barberId), price: item.price.toString() }))} appointments={serialized} availability={availability} recurringBreaks={recurringBreaks} blocks={serializedBlocks} reasons={reasons} /></section>;
+  return <section aria-label="Agenda" className="flex min-h-0 flex-1 flex-col"><OperationFeedback error={params.error} success={params.success} /><AgendaWorkspace dateLabel={titleDate.charAt(0).toUpperCase() + titleDate.slice(1)} isClosed={!businessHour || businessHour.isClosed} date={date} today={todayParts.date} showCancelled={showCancelled} nowMinutes={nowMinutes} startMinute={businessHour?.opensMinute ?? 0} endMinute={businessHour?.closesMinute ?? 0} barbers={barbers.map(({ id, name }) => ({ id, name }))} customers={customers} services={services.map(({ barberServices, ...item }) => ({ ...item, barberIds: barberServices.map(link => link.barberId), price: item.price.toString() }))} appointments={serialized} availability={availability} recurringBreaks={recurringBreaks} blocks={serializedBlocks} reasons={reasons} /></section>;
 }
