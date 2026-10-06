@@ -36,6 +36,16 @@ La URL pública del backend no es un secreto. No agregar secretos del servidor a
 
 ## Validación acotada
 
+### M4 — Citas y bloqueos
+
+El botón + de Agenda abre Nueva cita, Bloquear horario o Bloquear día, usando el profesional y fecha visibles. Nueva cita tiene cuatro pasos (cliente, servicio, fecha/hora y resumen). El cliente mínimo se guarda junto con la cita en la misma transacción; un teléfono existente se reutiliza y enriquece conservadoramente.
+
+Endpoints OWNER autenticados: GET `customers?query=`, GET `services?barberId=`, GET `availability?barberId=&serviceId=&date=`, POST `appointments`, GET/POST `blocks`, bajo `/api/mobile/`. No se aceptan precios, duraciones ni tenant enviados por la app. Se reutilizan las comprobaciones de slots, elegibilidad, matching y recordatorios. Las citas son INTERNAL/SCHEDULED, con precio del servicio al confirmar.
+
+Bloquear día cubre desde el comienzo hasta el fin de la jornada efectiva (incluidas pausas intermedias); en días sin jornada se rechaza. Los bloqueos horarios siguen la política web: no pueden cruzar citas activas, pero pueden coincidir con descansos/bloqueos existentes. No se agregan recurrencias. Fecha y horas se ingresan como AAAA-MM-DD / HH:MM, con navegación diaria; no se añade calendario mensual.
+
+Prueba puntual local: `npx tsx scripts/check-mobile-booking.ts`. Requiere backend en puerto 3000 y PostgreSQL local; crea y elimina únicamente fixtures aislados. Verifica endpoints y dominio, no interacción nativa. Sigue pendiente probar teclado, pasos y modales en teléfono.
+
 Desde la raíz: `npm run lint`, `npx tsc --noEmit` y `git diff --check`.
 Desde `mobile`: `npm run typecheck`.
 

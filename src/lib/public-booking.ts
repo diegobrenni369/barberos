@@ -1,5 +1,5 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
-import { customerEnrichment } from "@/lib/customer-matching";
+import { matchOrCreateCustomer } from "@/lib/customer-matching";
 import { syncAppointmentReminders } from "@/lib/appointment-reminders";
 import { dayRangeUtc, utcToZonedParts, zonedDateTimeToUtc } from "@/lib/agenda";
 import { dayOfWeekForDate, minuteToTime, ensureBarberAvailable, ensureNoBarberBreak, ensureNoBarberBlock } from "@/lib/barber-availability";
@@ -42,7 +42,7 @@ async function loadBookingDay(db: Prisma.TransactionClient, input: PublicSlotInp
 
 // Same domain checks used by Agenda, supplied with tenant/day-scoped preloaded
 // rows. This path performs no database query per slot or per candidate.
-async function availableBarber(db: Prisma.TransactionClient, day: Awaited<ReturnType<typeof loadBookingDay>>, date: string, time: string, now: Date) {
+export async function availableBarber(db: Prisma.TransactionClient, day: Awaited<ReturnType<typeof loadBookingDay>>, date: string, time: string, now: Date) {
   const startsAt = zonedDateTimeToUtc(date, time, day.shop.timezone);
   if (startsAt <= now) return null;
   const roundTrip = utcToZonedParts(startsAt, day.shop.timezone);
@@ -88,21 +88,7 @@ export async function confirmPublicBooking(db: PrismaClient, raw: unknown, now =
         const day = await loadBookingDay(tx, input, now);
         const selected = await availableBarber(tx, day, input.date, input.time, now);
         if (!selected) throw new PublicBookingError(SLOT_TAKEN);
-        const digits = input.phone.slice(1);
-        const local = digits.startsWith("56") && digits.length === 11 ? digits.slice(2) : digits;
-        // Match formatted phones within this tenant, regardless of the submitted name.
-        // Values are parameterized; lookup is always scoped to the resolved tenant.
-        const matches = await tx.$queryRaw<{ id: string; name: string; email: string | null }[]>`
-          SELECT "id", "name", "email" FROM "Customer"
-          WHERE "barbershopId" = ${day.shop.id}
-            AND regexp_replace(regexp_replace("phone", '[^0-9]', '', 'g'), '^00', '') IN (${digits}, ${local})
-          ORDER BY "createdAt", "id" LIMIT 1
-        `;
-        if (matches[0]) {
-          const enrichment = customerEnrichment(matches[0], input);
-          if (Object.keys(enrichment).length) await tx.customer.updateMany({ where: { id: matches[0].id, barbershopId: day.shop.id }, data: enrichment });
-        }
-        const customer = matches[0] ?? await tx.customer.create({ data: { barbershopId: day.shop.id, name: input.name, phone: input.phone, email: input.email || null }, select: { id: true } });
+        const customer = await matchOrCreateCustomer(tx, day.shop.id, input);
         const appointment = await tx.appointment.create({ data: {
           barbershopId: day.shop.id, customerId: customer.id, barberId: selected.barber.id, serviceId: day.service.id,
           startsAt: selected.startsAt, endsAt: selected.endsAt, price: day.service.price, status: "CONFIRMED", source: "ONLINE",

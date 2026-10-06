@@ -8,6 +8,7 @@ import { Avatar, Button, Card, EmptyState, colors, styles } from "../../componen
 import { Chevron } from "../../components/chevron";
 import { AgendaTimeline } from "../../components/agenda-timeline";
 import { AppointmentSheet } from "../../components/appointment-sheet";
+import { AgendaCreate, type CreateMode } from "../../components/agenda-create";
 
 export default function Agenda() {
   const { session, logout, get } = useAuth();
@@ -22,6 +23,9 @@ export default function Agenda() {
   const [busy, setBusy] = useState(false);
   const [logoutError, setLogoutError] = useState("");
   const [appointment, setAppointment] = useState<MobileAppointment | null>(null);
+  const [createMenu, setCreateMenu] = useState(false);
+  const [createMode, setCreateMode] = useState<CreateMode | null>(null);
+  const [notice, setNotice] = useState("");
   function checkoutDone(id: string) {
     const update = (item: MobileAppointment): MobileAppointment => item.id === id ? { ...item, status: "COMPLETED", canCharge: false, canChangeStatus: false, paymentLabel: "Pagada" } : item;
     setData(current => current ? { ...current, appointments: current.appointments.map(update) } : current);
@@ -55,7 +59,7 @@ export default function Agenda() {
   const changeDay = (next: string) => { if (!barberId && data?.barberId) setBarberId(data.barberId); setDate(next); };
   return <SafeAreaView style={styles.screen}>
     <View style={[styles.content, { gap: 10, paddingTop: 8, paddingBottom: 12, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: colors.border }]}>
-      <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}><Text style={[styles.title, { fontSize: 26 }]}>Agenda</Text><Text numberOfLines={1} style={[styles.muted, { flexShrink: 1, fontSize: 12 }]}>{session?.barbershop.name}</Text></View>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}><Text style={[styles.title, { fontSize: 26 }]}>Agenda</Text><Text numberOfLines={1} style={[styles.muted, { flexShrink: 1, fontSize: 12 }]}>{session?.barbershop.name}</Text><Pressable accessibilityRole="button" accessibilityLabel="Crear cita o bloqueo" disabled={!selected || loading} onPress={() => setCreateMenu(true)} style={{ width: 44, height: 44, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: colors.soft, opacity: !selected || loading ? 0.5 : 1 }}><Text style={{ fontSize: 26, color: colors.text }}>+</Text></Pressable></View>
       <View style={{ flexDirection: "row", gap: 6, alignItems: "center" }}>
         <View style={{ flexDirection: "row", gap: 2 }}>
           <Pressable accessibilityRole="button" accessibilityLabel="Día anterior" onPress={() => changeDay(moveDate(date, -1))} style={({ pressed }) => ({ width: 44, height: 44, alignItems: "center", justifyContent: "center", borderRadius: 10, backgroundColor: pressed ? colors.soft : colors.background })}><Chevron direction="left" /></Pressable>
@@ -67,6 +71,7 @@ export default function Agenda() {
       <Text style={[styles.subtitle, { fontSize: 14, lineHeight: 20 }]}>{new Intl.DateTimeFormat("es-CL", { timeZone: "UTC", weekday: "long", day: "numeric", month: "long" }).format(new Date(`${date}T12:00:00Z`))}</Text>
     </View>
     <ScrollView style={{ flex: 1 }} contentContainerStyle={[styles.content, { paddingTop: 12, paddingHorizontal: 8, paddingBottom: 12 }]}>
+      {!!notice && <Text accessibilityRole="alert" style={styles.muted}>{notice}</Text>}
       {loading ? <View accessibilityLabel="Cargando agenda" style={{ padding: 32 }}><ActivityIndicator /><Text style={styles.muted}>Cargando agenda…</Text></View> : error ? <Card><Text accessibilityRole="alert" style={styles.error}>{error}</Text><Button title="Reintentar" secondary onPress={() => setRetry(value => value + 1)} /></Card> : data && (data.barberId ? <AgendaTimeline data={data} onAppointment={setAppointment} /> : <EmptyState title="Sin profesionales activos" />)}
     </ScrollView>
     <View style={{ paddingHorizontal: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
@@ -74,6 +79,16 @@ export default function Agenda() {
       <Button title="Cerrar sesión" variant="ghost" loading={busy} onPress={() => void signOut()} />
     </View>
     {appointment && <AppointmentSheet key={appointment.id} appointment={appointment} timezone={timezone} onClose={() => setAppointment(null)} onChanged={statusChanged} onRefresh={() => setRetry(value => value + 1)} onPaid={checkoutDone} />}
+    {createMode && selected && <AgendaCreate mode={createMode} barberId={selected.id} barberName={selected.name} initialDate={date} onClose={() => setCreateMode(null)} onCreated={createdDate => { setNotice(createMode === "appointment" ? "Cita creada." : "Bloqueo guardado."); setBarberId(selected.id); setDate(createdDate); setCreateMode(null); setRetry(value => value + 1); }} />}
+    <Modal visible={createMenu} transparent animationType="fade" onRequestClose={() => setCreateMenu(false)}>
+      <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.25)" }}>
+        <Pressable accessibilityLabel="Cerrar opciones" accessibilityRole="button" onPress={() => setCreateMenu(false)} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+        <SafeAreaView style={{ backgroundColor: colors.background, borderTopLeftRadius: 20, borderTopRightRadius: 20 }}><View style={{ padding: 20, gap: 10 }}>
+          {([{ mode: "appointment", title: "Nueva cita" }, { mode: "block", title: "Bloquear horario" }, { mode: "day", title: "Bloquear día" }] as const).map(item => <Button key={item.mode} title={item.title} secondary onPress={() => { setCreateMenu(false); setCreateMode(item.mode); setNotice(""); }} />)}
+          <Button title="Cerrar" variant="ghost" onPress={() => setCreateMenu(false)} />
+        </View></SafeAreaView>
+      </View>
+    </Modal>
     <Modal visible={picker} animationType="slide" onRequestClose={() => setPicker(false)}>
       <SafeAreaView style={styles.screen}><ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Profesional</Text>
