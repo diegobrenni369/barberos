@@ -25,7 +25,6 @@ export function AppointmentCheckout({ appointment, onBack, onSuccess, onBusy }: 
     } finally { pending.current = false; setBusy(false); onBusy(false); }
   }
   return <View style={{ gap: 16 }}>
-    <Text style={styles.subtitle}>Cobrar atención</Text>
     <Card><Text style={styles.subtitle}>{appointment.customerName}</Text><Text style={styles.muted}>{appointment.serviceName}</Text><Text style={styles.muted}>Total a pagar</Text><Text style={styles.title}>{total}</Text></Card>
     <Text style={styles.label}>Método de pago</Text>
     <View accessibilityRole="radiogroup" style={{ gap: 8 }}>

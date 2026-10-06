@@ -1,5 +1,7 @@
 "use client";
 
+import { EVENT_INSET } from "./event-spacing";
+
 import { LockKeyhole } from "lucide-react";
 import { AGENDA_PIXELS_PER_MINUTE, AGENDA_TOP_GUTTER } from "@/lib/agenda";
 
@@ -20,10 +22,10 @@ export function BarberBlock({ block, gridStartMinute, gridEndMinute, onClick }: 
       onClick={onClick}
       title={summary}
       aria-label={summary}
-      className="absolute z-[8] overflow-hidden rounded-md border border-slate-300/70 bg-slate-100/85 px-2 text-left text-xs text-slate-700 transition hover:bg-slate-100 dark:border-slate-700/60 dark:bg-slate-900/70 dark:text-slate-300"
-      style={{ left: 4, right: 4, top: AGENDA_TOP_GUTTER + (visibleStart - gridStartMinute) * AGENDA_PIXELS_PER_MINUTE, height }}
+      className="absolute z-[8] overflow-hidden rounded-md text-left"
+      style={{ left: EVENT_INSET, right: EVENT_INSET, paddingTop: EVENT_INSET, paddingBottom: EVENT_INSET, top: AGENDA_TOP_GUTTER + (visibleStart - gridStartMinute) * AGENDA_PIXELS_PER_MINUTE, height }}
     >
-      <div className="flex h-full min-w-0 flex-col justify-center">
+      <div className="flex h-full min-w-0 flex-col justify-center overflow-hidden rounded-md border border-slate-300/70 bg-slate-100/85 px-2 text-xs text-slate-700 transition hover:bg-slate-100 dark:border-slate-700/60 dark:bg-slate-900/70 dark:text-slate-300">
         <div className="flex min-w-0 items-center justify-between gap-2 leading-4">
           <span className="flex min-w-0 items-center gap-1 font-medium">
             <LockKeyhole className="size-3 shrink-0" />

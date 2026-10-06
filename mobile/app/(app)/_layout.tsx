@@ -14,7 +14,7 @@ export default function AppLayout() {
     <View style={{ flex: 1 }}><Stack screenOptions={{ headerShown: false }} /></View>
     <SafeAreaView edges={["bottom"]} style={{ borderTopWidth: 1, borderColor: colors.border }}>
       <View accessibilityRole="tablist" style={{ flexDirection: "row", padding: 6, gap: 6 }}>
-        {([{ path: "/agenda", title: "Agenda" }, { path: "/customers", title: "Clientes" }, { path: "/commissions", title: "Comisiones" }] as const).map(item => <Pressable key={item.path} accessibilityRole="tab" accessibilityState={{ selected: pathname === item.path }} onPress={() => router.navigate(item.path)} style={{ flex: 1, minHeight: 48, alignItems: "center", justifyContent: "center", borderRadius: 10, backgroundColor: pathname === item.path ? colors.soft : colors.background }}><Text style={[styles.label, { color: pathname === item.path ? colors.text : colors.muted }]}>{item.title}</Text></Pressable>)}
+        {([{ path: "/agenda", title: "Agenda" }, { path: "/customers", title: "Clientes" }, { path: "/commissions", title: "Comisiones" }, { path: "/more", title: "Más" }] as const).map(item => <Pressable key={item.path} accessibilityRole="tab" accessibilityState={{ selected: pathname === item.path }} onPress={() => router.navigate(item.path)} style={{ flex: 1, minHeight: 48, alignItems: "center", justifyContent: "center", borderRadius: 10, backgroundColor: pathname === item.path ? colors.soft : colors.background }}><Text style={[styles.label, { color: pathname === item.path ? colors.text : colors.muted }]}>{item.title}</Text></Pressable>)}
       </View>
     </SafeAreaView>
   </View></SelectedBarberProvider>;

@@ -7,6 +7,8 @@ import { ApiError } from "../lib/api";
 import { appointmentAppearance } from "./agenda-timeline";
 import { Badge, Button, Card, Separator, colors, styles } from "./ui";
 import { AppointmentCheckout } from "./appointment-checkout";
+import { SheetHeader } from "./sheet-header";
+import { ContactActions } from "./contact-actions";
 
 type Status = "CONFIRMED" | "CANCELLED" | "NO_SHOW";
 export function AppointmentSheet({ appointment, timezone, onClose, onChanged, onRefresh, onPaid }: {
@@ -48,15 +50,15 @@ export function AppointmentSheet({ appointment, timezone, onClose, onChanged, on
     <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.25)" }}>
       <Pressable accessibilityRole="button" accessibilityLabel="Cerrar detalle" disabled={!!busy || checkoutBusy} onPress={close} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
       <View accessibilityViewIsModal style={{ maxHeight: "90%", backgroundColor: colors.background, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: insets.bottom }}>
-        <View {...pan.panHandlers} accessibilityLabel="Desliza hacia abajo para cerrar" style={{ padding: 18, alignItems: "center" }}><View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }} /></View>
-        <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16, gap: 20, width: "100%", maxWidth: 520, alignSelf: "center" }}>
+        <View {...pan.panHandlers} accessibilityLabel="Desliza hacia abajo para cerrar" style={{ padding: 12, flexShrink: 0, alignItems: "center" }}><View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }} /></View>
+        <SheetHeader title={checkout ? "Cobrar atención" : "Reserva"} onClose={close} disabled={!!busy || checkoutBusy} />
+        <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16, gap: 20, width: "100%", maxWidth: 520, alignSelf: "center" }}>
           {checkout ? <AppointmentCheckout appointment={appointment} onBack={() => setCheckout(false)} onBusy={value => { pending.current = value; setCheckoutBusy(value); }} onSuccess={() => { onPaid(appointment.id); setPaid(true); setCheckout(false); }} /> : <>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-            <Text style={[styles.muted, { fontSize: 12, fontWeight: "600", letterSpacing: 0.6 }]}>Reserva</Text>
-            <Badge tone={appearance.tone}>{appearance.label}</Badge>
-          </View>
           <View style={{ gap: 6 }}>
-            <Text style={[styles.title, { fontSize: 26, lineHeight: 32 }]}>{appointment.customerName}</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <Text style={[styles.title, { flex: 1, fontSize: 26, lineHeight: 32 }]}>{appointment.customerName}</Text>
+              <View style={{ flexShrink: 0 }}><Badge tone={appearance.tone}>{appearance.label}</Badge></View>
+            </View>
             <Text style={[styles.muted, { fontSize: 16, lineHeight: 24 }]}>{appointment.serviceName}</Text>
           </View>
           <Card style={{ backgroundColor: "#fafafa", gap: 14 }}>
@@ -71,10 +73,17 @@ export function AppointmentSheet({ appointment, timezone, onClose, onChanged, on
               <View style={{ gap: 5 }}><Text style={[styles.muted, { fontSize: 12 }]}>Precio</Text><Text style={[styles.subtitle, { fontSize: 16 }]}>{new Intl.NumberFormat("es-CL", { style: "currency", currency: appointment.currency }).format(Number(appointment.price))}</Text></View>
             </View>
           </Card>
-          {!!appointment.phone && <View style={{ gap: 8 }}><Text style={[styles.muted, { fontSize: 12, fontWeight: "600" }]}>Contacto</Text><Card style={{ padding: 14, gap: 4 }}><Text style={[styles.muted, { fontSize: 12 }]}>Teléfono</Text><Text selectable style={[styles.label, { fontSize: 16, lineHeight: 24 }]}>{appointment.phone}</Text></Card></View>}
+          {!!appointment.phone && <View style={{ gap: 8 }}><Text style={[styles.muted, { fontSize: 12, fontWeight: "600" }]}>Contacto</Text><Card style={{ padding: 14, gap: 10 }}><View style={{ gap: 4 }}><Text style={[styles.muted, { fontSize: 12 }]}>Teléfono</Text><Text selectable style={[styles.label, { fontSize: 16, lineHeight: 24 }]}>{appointment.phone}</Text></View><ContactActions phone={appointment.phone} /></Card></View>}
           {!!appointment.notes && <View style={{ gap: 8 }}><Text style={[styles.muted, { fontSize: 12, fontWeight: "600" }]}>Notas</Text><Text style={[styles.label, { lineHeight: 22 }]}>{appointment.notes}</Text></View>}
           {!!error && <><Text accessibilityRole="alert" style={styles.error}>{error}</Text><Button secondary title="Actualizar agenda" disabled={!!busy} onPress={() => { onClose(); onRefresh(); }} /></>}
-          {!!appointment.paymentLabel && <Text style={styles.muted}>{appointment.paymentLabel}</Text>}
+          {!!appointment.paymentLabel && <View style={{ gap: 8 }}>
+            <Text style={[styles.muted, { fontSize: 12, fontWeight: "600" }]}>Pago</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+              <Badge>{appointment.paymentLabel}</Badge>
+              {!!appointment.payment?.methods && <Text style={styles.label}>{appointment.payment.methods}</Text>}
+            </View>
+            {appointment.payment && <Text style={styles.subtitle}>{new Intl.NumberFormat("es-CL", { style: "currency", currency: appointment.payment.currency }).format(Number(appointment.payment.amount))}</Text>}
+          </View>}
           {paid && <Text accessibilityRole="alert" style={styles.muted}>Cobro registrado.</Text>}
           {appointment.canCharge && <Button title="Cobrar" disabled={!!busy} onPress={() => setCheckout(true)} />}
           {appointment.canChangeStatus && <View style={{ gap: 10 }}>
@@ -85,7 +94,6 @@ export function AppointmentSheet({ appointment, timezone, onClose, onChanged, on
               <Button title="Marcar no asistió" secondary disabled={!!busy} loading={busy === "NO_SHOW"} onPress={() => confirm("NO_SHOW")} />
             </>}
           </View>}
-          <Button title="Cerrar" variant="ghost" disabled={!!busy} onPress={close} />
           </>}
         </ScrollView>
       </View>

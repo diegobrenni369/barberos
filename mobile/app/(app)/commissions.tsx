@@ -1,14 +1,14 @@
 import { useCallback, useState } from "react";
 import { useFocusEffect } from "expo-router";
-import { ActivityIndicator, FlatList, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../lib/auth";
 import { useSelectedBarber } from "../../lib/selected-barber";
 import { todayIn } from "../../lib/agenda";
 import { ApiError } from "../../lib/api";
-import { CompactSelect, DateControl, readableDate } from "../../components/creation-controls";
-import { Badge, Button, Card, Separator, styles } from "../../components/ui";
-import { Check } from "../../components/chevron";
+import { PickerSurface, SelectionOption, DateControl, readableDate } from "../../components/creation-controls";
+import { Badge, Button, Card, Separator, colors, styles } from "../../components/ui";
+import { Chevron } from "../../components/chevron";
 
 type Report = {
   barber: { id: string; name: string }; timezone: string; currency: string; from: string; to: string;
@@ -17,9 +17,33 @@ type Report = {
 };
 const periods = [{ id: "week", title: "Esta semana" }, { id: "previous-week", title: "Semana anterior" }, { id: "fortnight", title: "Quincena actual" }, { id: "month", title: "Este mes" }, { id: "custom", title: "Personalizado" }];
 
+function HeaderSelect({ label, title, value, options, onChange, disabled }: { label: string; title: string; value: string | null; options: { id: string; title: string }[]; onChange: (id: string) => void; disabled?: boolean }) {
+  const [open, setOpen] = useState(false);
+  return <>
+    <Pressable accessibilityRole="button" accessibilityLabel={`${label}: ${title}`} disabled={disabled} onPress={() => setOpen(true)} style={({ pressed }) => ({ alignSelf: "flex-start", maxWidth: "100%", minHeight: 44, paddingLeft: 0, paddingRight: 16, flexDirection: "row", alignItems: "center", gap: 4, borderRadius: 10, backgroundColor: pressed ? colors.soft : "transparent", opacity: disabled ? 0.5 : 1 })}><Text numberOfLines={1} style={[styles.label, { flexShrink: 1 }]}>{title}</Text><Chevron direction="down" size={18} /></Pressable>
+    {open && <PickerSurface title={label} onClose={() => setOpen(false)}><ScrollView contentContainerStyle={{ padding: 16 }}>{options.map(item => <SelectionOption key={item.id} title={item.title} selected={item.id === value} onPress={() => { onChange(item.id); setOpen(false); }} />)}</ScrollView></PickerSurface>}
+  </>;
+}
+
 export default function Commissions() {
   const { get, session } = useAuth();
-  const { barberId } = useSelectedBarber();
+  const { barberId, setBarberId } = useSelectedBarber();
+  const [barbers, setBarbers] = useState<{ id: string; name: string }[]>([]);
+  const [barbersLoading, setBarbersLoading] = useState(false);
+  const [barbersError, setBarbersError] = useState("");
+  const [barbersRetry, setBarbersRetry] = useState(0);
+  const owner = session?.role === "OWNER";
+  useFocusEffect(useCallback(() => {
+    if (!owner) return;
+    let active = true;
+    setBarbersLoading(true); setBarbersError("");
+    // Reuse the existing tenant-scoped professional list; selection stays in shared context.
+    void get<{ barbers: { id: string; name: string }[] }>("/api/mobile/agenda")
+      .then(result => { if (active) setBarbers(result.barbers); })
+      .catch(() => { if (active) setBarbersError("No se pudieron cargar los profesionales."); })
+      .finally(() => { if (active) setBarbersLoading(false); });
+    return () => { active = false; };
+  }, [get, owner, barbersRetry]));
   const [period, setPeriod] = useState("month");
   const [from, setFrom] = useState(() => todayIn(session?.barbershop.timezone ?? "America/Santiago"));
   const [to, setTo] = useState(from);
@@ -36,18 +60,27 @@ export default function Commissions() {
     const custom = period === "custom" ? `&from=${from}&to=${to}` : "";
     void get<Report>(`/api/mobile/commissions?barberId=${encodeURIComponent(barberId)}&period=${period}${custom}`)
       .then(result => { if (active) setReport(result); })
-      .catch(failure => { if (active) setError(failure instanceof ApiError && failure.status === 404 ? "El profesional ya no está disponible. Selecciona otro en Agenda." : "No se pudieron cargar las comisiones."); })
+      .catch(failure => { if (active) setError(failure instanceof ApiError && failure.status === 404 ? "El profesional ya no está disponible." : "No se pudieron cargar las comisiones."); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [barberId, from, to, period, invalidRange, get, retry]));
   const money = (value: string, currency: string) => new Intl.NumberFormat("es-CL", { style: "currency", currency }).format(Number(value));
   return <SafeAreaView edges={["top", "left", "right"]} style={styles.screen}>
-    <FlatList data={report?.rows ?? []} keyExtractor={item => item.id} contentContainerStyle={[styles.content, { padding: 16, gap: 12 }]}
+    <FlatList data={report?.rows ?? []} keyExtractor={item => item.id} contentContainerStyle={[styles.content, { padding: 16, gap: 0 }]}
       ListHeaderComponent={<View style={{ gap: 16 }}>
-        <View style={{ gap: 4 }}><Text style={styles.title}>Mis comisiones</Text>{report && <Text style={styles.muted}>{report.barber.name}</Text>}</View>
-        <CompactSelect label="Período" value={period} options={periods} onChange={setPeriod} selectedIcon={<Check />} />
+        <Text style={styles.title}>Mis comisiones</Text>
+        <View style={{ gap: 4 }}>
+          {owner ? <HeaderSelect label="Profesional" title={barbers.find(item => item.id === barberId)?.name ?? report?.barber.name ?? "Seleccionar profesional"} value={barberId} options={barbers.map(item => ({ id: item.id, title: item.name }))} onChange={setBarberId} disabled={barbersLoading || !barbers.length} /> : <View style={{ minHeight: 44, paddingHorizontal: 0, justifyContent: "center" }}><Text style={styles.label}>{session?.barberName}</Text></View>}
+          {barbersLoading && <ActivityIndicator accessibilityLabel="Cargando profesionales" />}
+          {!!barbersError && <><Text style={styles.error} accessibilityRole="alert">{barbersError}</Text><Button title="Reintentar profesionales" variant="ghost" onPress={() => setBarbersRetry(value => value + 1)} /></>}
+          {owner && !barbersLoading && !barbersError && !barbers.length && <Text style={styles.muted}>Sin profesionales activos.</Text>}
+          <View style={{ gap: 0, marginTop: 8 }}>
+            <Text style={[styles.muted, { fontSize: 12 }]}>Período</Text>
+            <View style={{ marginTop: -6 }}><HeaderSelect label="Período" title={periods.find(item => item.id === period)!.title} value={period} options={periods} onChange={setPeriod} /></View>
+          </View>
+        </View>
         {period === "custom" && <View style={{ gap: 10 }}><View style={{ gap: 4 }}><Text style={styles.label}>Desde</Text><DateControl date={from} onChange={setFrom} /></View><View style={{ gap: 4 }}><Text style={styles.label}>Hasta</Text><DateControl date={to} onChange={setTo} /></View></View>}
-        {!barberId && <Text style={styles.muted}>Selecciona un profesional en Agenda para consultar sus comisiones.</Text>}
+        {!barberId && <Text style={styles.muted}>Selecciona un profesional para consultar sus comisiones.</Text>}
         {invalidRange && <Text accessibilityRole="alert" style={styles.error}>La fecha de inicio debe ser anterior o igual al término.</Text>}
         {loading && <ActivityIndicator accessibilityLabel="Cargando comisiones" />}
         {!!error && <><Text accessibilityRole="alert" style={styles.error}>{error}</Text><Button title="Reintentar" secondary onPress={() => setRetry(value => value + 1)} /></>}
@@ -62,7 +95,7 @@ export default function Commissions() {
       </View>}
       ListEmptyComponent={report ? <Text style={styles.muted}>No hay comisiones en este período.</Text> : null}
       ItemSeparatorComponent={Separator}
-      renderItem={({ item }) => <View style={{ gap: 4 }}>
+      renderItem={({ item }) => <View style={{ gap: 4, paddingVertical: 14 }}>
         <Text style={[styles.muted, { fontSize: 12 }]}>{new Intl.DateTimeFormat("es-CL", { timeZone: report?.timezone, day: "numeric", month: "short", year: "numeric" }).format(new Date(item.date))}</Text>
         <Text style={styles.label}>{item.service}</Text><Text style={styles.muted}>{item.customer}</Text>
         <Text style={[styles.muted, { fontSize: 12 }]}>Venta {money(item.base, item.currency)} · {item.rate}%</Text>

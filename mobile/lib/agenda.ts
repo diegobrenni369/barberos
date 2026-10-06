@@ -1,5 +1,5 @@
 export type Interval = { startMinute: number; endMinute: number };
-export type MobileAppointment = Interval & { id: string; customerName: string; serviceName: string; status: "SCHEDULED" | "CONFIRMED" | "COMPLETED" | "NO_SHOW" | "CANCELLED"; phone: string | null; notes: string | null; price: string; currency: string; barberName: string; startsAt: string; endsAt: string; canChangeStatus: boolean; canCharge: boolean; paymentLabel: string | null };
+export type MobileAppointment = Interval & { id: string; customerName: string; serviceName: string; status: "SCHEDULED" | "CONFIRMED" | "COMPLETED" | "NO_SHOW" | "CANCELLED"; phone: string | null; notes: string | null; price: string; currency: string; barberName: string; startsAt: string; endsAt: string; canChangeStatus: boolean; canCharge: boolean; paymentLabel: string | null; payment?: { methods: string; amount: string; currency: string } | null };
 export type AgendaData = {
   date: string; today: string; barberId: string | null;
   barbers: { id: string; name: string }[];
