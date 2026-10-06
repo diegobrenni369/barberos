@@ -2,6 +2,7 @@ import { dayRangeUtc, utcToZonedParts } from "@/lib/agenda";
 import { dayOfWeekForDate, effectiveAvailability } from "@/lib/barber-availability";
 import { mobileResponse, resolveMobileAccess } from "@/lib/mobile-auth";
 import { prisma } from "@/lib/prisma";
+import { getSalePaymentLabel } from "@/lib/sale-balance";
 
 export const runtime = "nodejs";
 
@@ -23,7 +24,7 @@ export async function GET(request: Request) {
     const businessHour = await prisma.barbershopBusinessHour.findUnique({ where: { barbershopId_dayOfWeek: { barbershopId, dayOfWeek } }, select: { isClosed: true, opensMinute: true, closesMinute: true } });
     const scope = { barbershopId, barberId: barberId ?? "" };
     const [appointments, breaks, blocks, availability] = barberId ? await Promise.all([
-      prisma.appointment.findMany({ where: { ...scope, startsAt: { lt: range.end }, endsAt: { gt: range.start }, status: { not: "CANCELLED" } }, select: { id: true, startsAt: true, endsAt: true, status: true, notes: true, price: true, barbershop: { select: { currency: true } }, barber: { select: { name: true } }, sale: { select: { id: true } }, customer: { select: { name: true, phone: true } }, service: { select: { name: true } } }, orderBy: { startsAt: "asc" } }),
+      prisma.appointment.findMany({ where: { ...scope, startsAt: { lt: range.end }, endsAt: { gt: range.start }, status: { not: "CANCELLED" } }, select: { id: true, startsAt: true, endsAt: true, status: true, notes: true, price: true, barbershop: { select: { currency: true } }, barber: { select: { name: true } }, sale: { select: { total: true, status: true, payments: { select: { amount: true } } } }, customer: { select: { name: true, phone: true } }, service: { select: { name: true } } }, orderBy: { startsAt: "asc" } }),
       prisma.barberBreak.findMany({ where: { ...scope, dayOfWeek }, select: { id: true, startMinute: true, endMinute: true, label: true }, orderBy: { startMinute: "asc" } }),
       prisma.barberBlock.findMany({ where: { ...scope, startsAt: { lt: range.end }, endsAt: { gt: range.start } }, select: { id: true, startsAt: true, endsAt: true, reason: { select: { name: true } } }, orderBy: { startsAt: "asc" } }),
       prisma.barberAvailability.findMany({ where: scope, select: { dayOfWeek: true, startMinute: true, endMinute: true } }),
@@ -36,7 +37,7 @@ export async function GET(request: Request) {
     };
     return mobileResponse({ date, today, barbershop: { id: barbershopId, name: barbershop.name, timezone: barbershop.timezone }, barbers, barberId, businessHour,
       availability: effectiveAvailability(availability.length > 0, availability.filter(row => row.dayOfWeek === dayOfWeek), businessHour),
-      appointments: appointments.map(item => ({ id: item.id, startMinute: minute(item.startsAt), endMinute: minute(item.endsAt), customerName: item.customer.name, serviceName: item.service.name, status: item.status, phone: item.customer.phone, notes: item.notes, price: item.price.toString(), currency: item.barbershop.currency, barberName: item.barber.name, startsAt: item.startsAt.toISOString(), endsAt: item.endsAt.toISOString(), canChangeStatus: !item.sale && ["SCHEDULED", "CONFIRMED"].includes(item.status) })),
+      appointments: appointments.map(item => ({ id: item.id, startMinute: minute(item.startsAt), endMinute: minute(item.endsAt), customerName: item.customer.name, serviceName: item.service.name, status: item.status, phone: item.customer.phone, notes: item.notes, price: item.price.toString(), currency: item.barbershop.currency, barberName: item.barber.name, startsAt: item.startsAt.toISOString(), endsAt: item.endsAt.toISOString(), canChangeStatus: !item.sale && ["SCHEDULED", "CONFIRMED"].includes(item.status), canCharge: !item.sale && item.barbershop.currency === "CLP" && ["SCHEDULED", "CONFIRMED", "COMPLETED"].includes(item.status), paymentLabel: item.sale ? getSalePaymentLabel(item.sale) : null })),
       breaks, blocks: blocks.map(item => ({ id: item.id, startMinute: minute(item.startsAt), endMinute: minute(item.endsAt), label: item.reason.name })),
     });
   } catch {
