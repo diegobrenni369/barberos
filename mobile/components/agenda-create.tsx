@@ -5,8 +5,7 @@ import { useAuth } from "../lib/auth";
 import { ApiError } from "../lib/api";
 import { timeLabel } from "../lib/agenda";
 import { Button, Card, Input, colors, styles } from "./ui";
-import { Check } from "./chevron";
-import { CompactSelect, DateControl, SearchIcon, SelectRow, PickerSurface, readableDate } from "./creation-controls";
+import { CompactSelect, DateControl, SearchIcon, SelectRow, PickerSurface, SelectionOption, readableDate } from "./creation-controls";
 
 export type CreateMode = "appointment" | "block" | "day";
 type Customer = { id: string; name: string; phone: string | null };
@@ -26,7 +25,7 @@ export function AgendaCreate(props: Props) {
   const close = () => { if (!pending.current) props.onClose(); };
   return <Modal animationType="slide" onRequestClose={close}>
     <SafeAreaView style={styles.screen}><KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 8, borderBottomWidth: 1, borderColor: colors.border }}><View style={{ flex: 1, gap: 3 }}><Text style={[styles.subtitle, { fontSize: 20 }]}>{props.mode === "appointment" ? "Nueva cita" : props.mode === "day" ? "Bloquear día" : "Bloquear horario"}</Text><Text style={styles.muted}>{props.barberName}</Text></View><Button title="Cerrar" variant="ghost" disabled={busy} onPress={close} /></View>
+      <SheetHeader title={props.mode === "appointment" ? "Nueva cita" : props.mode === "day" ? "Bloquear día" : "Bloquear horario"} subtitle={props.barberName} disabled={busy} onClose={close} />
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content, { padding: 16 }]}>
         {props.mode === "appointment" ? <BookingForm {...props} setPending={setPending} /> : <BlockForm {...props} setPending={setPending} />}
       </ScrollView>
@@ -87,7 +86,7 @@ function BookingForm({ barberId, initialDate, onCreated, setPending }: Props & {
           </View>
           <ScrollView keyboardShouldPersistTaps="handled" style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}>
             {loading && <ActivityIndicator accessibilityLabel="Buscando clientes" />}
-            {!loading && !error && customers.map(item => <Pressable key={item.id} accessibilityRole="button" accessibilityState={{ selected: customer?.id === item.id }} onPress={() => { setCustomer(item); setIsNew(false); setCustomerPicker(false); }} style={{ minHeight: 52, paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1, borderColor: colors.border, backgroundColor: customer?.id === item.id ? colors.soft : colors.background, flexDirection: "row", alignItems: "center", gap: 8 }}><View style={{ flex: 1, gap: 3 }}><Text style={styles.label}>{item.name}</Text><Text style={[styles.muted, { fontSize: 12 }]}>{item.phone ?? "Sin teléfono"}</Text></View>{customer?.id === item.id && <Check />}</Pressable>)}
+            {!loading && !error && customers.map(item => <SelectionOption key={item.id} title={item.name} detail={item.phone ?? "Sin teléfono"} selected={customer?.id === item.id} onPress={() => { setCustomer(item); setIsNew(false); setCustomerPicker(false); }} />)}
             {!loading && !error && !customers.length && <Text style={styles.muted}>No se encontraron clientes.</Text>}
             {!!error && <View style={{ gap: 8 }}><Text accessibilityRole="alert" style={styles.error}>{error}</Text><Button title="Reintentar" secondary onPress={() => setReload(value => value + 1)} /></View>}
           </ScrollView>
@@ -150,8 +149,8 @@ function BlockForm({ mode, barberId, initialDate, onCreated, setPending }: Props
       </View>
       {!loading && data && !startSlots.length && <Text style={styles.muted}>No hay horarios disponibles para bloquear este día.</Text>}
       {timePicker && <PickerSurface title={timePicker === "start" ? "Inicio" : "Fin"} onClose={() => setTimePicker(null)}>
-        <ScrollView contentContainerStyle={{ padding: 16, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-          {(timePicker === "start" ? startSlots : endSlots).map(slot => <Choice key={slot} title={slot} selected={slot === (timePicker === "start" ? startTime : endTime)} onPress={() => { if (timePicker === "start") setStartTime(slot); else setEndTime(slot); setTimePicker(null); }} />)}
+        <ScrollView contentContainerStyle={{ padding: 16 }}>
+          {(timePicker === "start" ? startSlots : endSlots).map(slot => <SelectionOption key={slot} title={slot} selected={slot === (timePicker === "start" ? startTime : endTime)} onPress={() => { if (timePicker === "start") setStartTime(slot); else setEndTime(slot); setTimePicker(null); }} />)}
         </ScrollView>
       </PickerSurface>}
     </>}
@@ -164,3 +163,4 @@ function BlockForm({ mode, barberId, initialDate, onCreated, setPending }: Props
     <Button title={allDay ? "Bloquear día" : "Guardar bloqueo"} loading={busy} disabled={loading || !validDate(date) || !data?.reasons.some(reason => reason.id === reasonId) || (allDay ? !data?.intervals.length : !hoursValid || !selectedHoursAvailable)} onPress={() => void submit()} />
   </View>;
 }
+import { SheetHeader } from "./sheet-header";

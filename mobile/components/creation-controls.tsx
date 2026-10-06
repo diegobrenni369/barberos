@@ -2,12 +2,24 @@ import { useState, type ReactNode } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Check, Chevron } from "./chevron";
+import { SheetHeader } from "./sheet-header";
 import { Button, colors, styles } from "./ui";
 
 export const readableDate = (date: string) => new Intl.DateTimeFormat("es-CL", { timeZone: "UTC", weekday: "long", day: "numeric", month: "long" }).format(new Date(`${date}T12:00:00Z`));
+export function SelectionOption({ title, detail, selected, onPress, selectedIcon = <Check /> }: { title: string; detail?: string; selected?: boolean; onPress: () => void; selectedIcon?: ReactNode }) {
+  return <Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={onPress} style={({ pressed }) => ({ minHeight: 52, paddingHorizontal: 12, paddingVertical: 12, borderBottomWidth: 0.5, borderColor: colors.border, backgroundColor: selected || pressed ? colors.soft : colors.background, flexDirection: "row", gap: 12, alignItems: "center" })}><View style={{ flex: 1, gap: 3 }}><Text style={styles.label}>{title}</Text>{!!detail && <Text style={[styles.muted, { fontSize: 12 }]}>{detail}</Text>}</View>{selected && selectedIcon}</Pressable>;
+}
+export function ActionSurface({ onClose, children }: { onClose: () => void; children: ReactNode }) {
+  return <Modal transparent animationType="fade" onRequestClose={onClose}>
+    <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.25)" }}>
+      <Pressable accessibilityLabel="Cerrar opciones" accessibilityRole="button" onPress={onClose} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+      <SafeAreaView edges={["bottom", "left", "right"]} style={{ backgroundColor: colors.background, borderTopLeftRadius: 20, borderTopRightRadius: 20 }}><View style={{ padding: 16, gap: 10 }}>{children}<Button title="Cerrar" variant="ghost" onPress={onClose} /></View></SafeAreaView>
+    </View>
+  </Modal>;
+}
 export function PickerSurface({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   return <Modal animationType="slide" onRequestClose={onClose}><SafeAreaView style={styles.screen}>
-    <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, borderBottomWidth: 1, borderColor: colors.border }}><Text style={[styles.subtitle, { flex: 1 }]}>{title}</Text><Button title="Listo" variant="ghost" onPress={onClose} /></View>
+    <SheetHeader title={title} action="Listo" onClose={onClose} />
     {children}
   </SafeAreaView></Modal>;
 }
@@ -18,7 +30,7 @@ export function CompactSelect({ label, value, options, onChange, disabled, selec
   const [open, setOpen] = useState(false);
   const selected = options.find(item => item.id === value);
   return <><SelectRow label={label} value={selected?.title ?? "Seleccionar"} detail={selected?.detail} disabled={disabled || !options.length} onPress={() => setOpen(true)} />
-    {open && <PickerSurface title={label} onClose={() => setOpen(false)}><ScrollView contentContainerStyle={{ padding: 16 }}>{options.map(item => <Pressable key={item.id} accessibilityRole="button" accessibilityState={{ selected: item.id === value }} onPress={() => { onChange(item.id); setOpen(false); }} style={{ minHeight: 52, padding: 12, borderBottomWidth: 1, borderColor: colors.border, backgroundColor: item.id === value ? colors.soft : colors.background, flexDirection: "row", gap: 12, alignItems: "center" }}><View style={{ flex: 1, gap: 3 }}><Text style={styles.label}>{item.title}</Text>{!!item.detail && <Text style={[styles.muted, { fontSize: 12 }]}>{item.detail}</Text>}</View>{item.id === value && selectedIcon}</Pressable>)}</ScrollView></PickerSurface>}
+    {open && <PickerSurface title={label} onClose={() => setOpen(false)}><ScrollView contentContainerStyle={{ padding: 16 }}>{options.map(item => <SelectionOption key={item.id} title={item.title} detail={item.detail} selected={item.id === value} selectedIcon={selectedIcon} onPress={() => { onChange(item.id); setOpen(false); }} />)}</ScrollView></PickerSurface>}
   </>;
 }
 export function DateControl({ date, onChange }: { date: string; onChange: (date: string) => void }) {
