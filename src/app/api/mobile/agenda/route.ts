@@ -16,8 +16,8 @@ export async function GET(request: Request) {
     const date = params.get("date") ?? today;
     const parsed = new Date(`${date}T12:00:00Z`);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date) return mobileResponse({ error: "Fecha no válida." }, 400);
-    const barbers = await prisma.barber.findMany({ where: { barbershopId, isActive: true }, select: { id: true, name: true }, orderBy: { name: "asc" } });
-    const barberId = params.get("barberId") ?? barbers[0]?.id ?? null;
+    const barbers = await prisma.barber.findMany({ where: { barbershopId, isActive: true, ...(access.role === "BARBER" ? { id: access.barberId! } : {}) }, select: { id: true, name: true }, orderBy: { name: "asc" } });
+    const barberId = access.role === "BARBER" ? access.barberId : params.get("barberId") ?? barbers[0]?.id ?? null;
     if (barberId !== null && !barbers.some(barber => barber.id === barberId)) return mobileResponse({ error: "Profesional no disponible." }, 404);
     const dayOfWeek = dayOfWeekForDate(date);
     const range = dayRangeUtc(date, barbershop.timezone);

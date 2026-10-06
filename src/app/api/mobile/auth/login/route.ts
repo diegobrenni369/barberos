@@ -1,5 +1,5 @@
 import { validateCredentials } from "@/lib/credentials";
-import { createMobileSession, mobileMembership, mobileResponse } from "@/lib/mobile-auth";
+import { createMobileSession, mobileMembership, mobileResponse, mobileIdentity } from "@/lib/mobile-auth";
 import { allowPublicRequest } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
 import { logFailure } from "@/lib/safe-logging";
@@ -27,8 +27,8 @@ export async function POST(request: Request) {
     const user = await validateCredentials(credentials);
     if (!user) return mobileResponse({ error: "Correo o contraseña incorrectos." }, 401);
     const member = await mobileMembership(user.id);
-    if (!member) return mobileResponse({ error: "El acceso móvil requiere un propietario con barbería activa." }, 403);
-    return mobileResponse({ ...await createMobileSession(user.id), user, barbershop: { id: member.barbershop.id, name: member.barbershop.name, timezone: member.barbershop.timezone } });
+    if (!member) return mobileResponse({ error: "No tienes un acceso móvil activo. Consulta al propietario." }, 403);
+    return mobileResponse({ ...await createMobileSession(user.id), ...mobileIdentity(member), user, barbershop: { id: member.barbershop.id, name: member.barbershop.name, timezone: member.barbershop.timezone } });
   } catch {
     logFailure("auth_failed");
     return mobileResponse({ error: "No se pudo iniciar sesión. Intenta nuevamente." }, 503);

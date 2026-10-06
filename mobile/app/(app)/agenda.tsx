@@ -67,7 +67,7 @@ export default function Agenda() {
           <Button title="Hoy" compact secondary onPress={() => changeDay(todayIn(timezone))} />
           <Pressable accessibilityRole="button" accessibilityLabel="Día siguiente" onPress={() => changeDay(moveDate(date, 1))} style={({ pressed }) => ({ width: 44, height: 44, alignItems: "center", justifyContent: "center", borderRadius: 10, backgroundColor: pressed ? colors.soft : colors.background })}><Chevron direction="right" /></Pressable>
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="Seleccionar profesional" disabled={!data?.barbers.length} onPress={() => setPicker(true)} style={({ pressed }) => ({ flex: 1, minWidth: 0, minHeight: 44, paddingHorizontal: 8, flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 10, backgroundColor: pressed ? colors.soft : colors.background })}><Text numberOfLines={1} style={[styles.label, { flex: 1 }]}>{selected?.name ?? "Profesional"}</Text><Chevron direction="down" size={20} /></Pressable>
+        {session?.role === "BARBER" ? <Text style={[styles.label, { flex: 1 }]}>{session.barberName}</Text> : <Pressable accessibilityRole="button" accessibilityLabel="Seleccionar profesional" disabled={!data?.barbers.length} onPress={() => setPicker(true)} style={({ pressed }) => ({ flex: 1, minWidth: 0, minHeight: 44, paddingHorizontal: 8, flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 10, backgroundColor: pressed ? colors.soft : colors.background })}><Text numberOfLines={1} style={[styles.label, { flex: 1 }]}>{selected?.name ?? "Profesional"}</Text><Chevron direction="down" size={20} /></Pressable>}
       </View>
       <Text style={[styles.subtitle, { fontSize: 14, lineHeight: 20 }]}>{new Intl.DateTimeFormat("es-CL", { timeZone: "UTC", weekday: "long", day: "numeric", month: "long" }).format(new Date(`${date}T12:00:00Z`))}</Text>
     </View>
@@ -90,7 +90,7 @@ export default function Agenda() {
         </View></SafeAreaView>
       </View>
     </Modal>
-    <Modal visible={picker} animationType="slide" onRequestClose={() => setPicker(false)}>
+    <Modal visible={picker && session?.role === "OWNER"} animationType="slide" onRequestClose={() => setPicker(false)}>
       <SafeAreaView style={styles.screen}><ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Profesional</Text>
         {data?.barbers.map(barber => <Pressable key={barber.id} accessibilityRole="button" accessibilityState={{ selected: selected?.id === barber.id }} onPress={() => { setBarberId(barber.id); setPicker(false); }} style={[styles.card, { flexDirection: "row", alignItems: "center" }]}><Avatar name={barber.name} /><Text style={[styles.label, { flex: 1 }]}>{barber.name}</Text>{selected?.id === barber.id && <Check />}</Pressable>)}

@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import * as SecureStore from "expo-secure-store";
 import { ApiError, request } from "./api";
 
-type Session = { user: { id: string; name: string; email: string }; barbershop: { id: string; name: string; timezone: string }; expiresAt: string };
+type Session = { role: "OWNER" | "BARBER"; barberId: string | null; barberName: string | null; user: { id: string; name: string; email: string }; barbershop: { id: string; name: string; timezone: string }; expiresAt: string };
 type Auth = { session: Session | null; loading: boolean; error: string; restore: () => Promise<void>; login: (email: string, password: string) => Promise<void>; logout: () => Promise<void>; get: <T>(path: string, options?: { method: "PATCH" | "POST"; body: unknown }) => Promise<T> };
 const Context = createContext<Auth | null>(null);
 const KEY = "barberos.mobile.session";
@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error("No se pudo guardar la sesión de forma segura. Intenta nuevamente.");
     }
     token.current = result.token;
-    setSession({ user: result.user, barbershop: result.barbershop, expiresAt: result.expiresAt });
+    setSession({ role: result.role, barberId: result.barberId, barberName: result.barberName, user: result.user, barbershop: result.barbershop, expiresAt: result.expiresAt });
   }
   async function logout() {
     if (token.current) {

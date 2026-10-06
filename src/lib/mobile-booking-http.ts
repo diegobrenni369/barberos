@@ -1,12 +1,12 @@
 import { z } from "zod";
-import { mobileResponse, resolveMobileAccess } from "@/lib/mobile-auth";
+import { mobileResponse, resolveMobileAccess, type MobileAccess } from "@/lib/mobile-auth";
 import { MobileBookingError } from "@/lib/mobile-booking";
 
-export async function mobileBookingRoute(request: Request, action: (barbershopId: string) => Promise<unknown>) {
+export async function mobileBookingRoute(request: Request, action: (barbershopId: string, access: MobileAccess) => Promise<unknown>) {
   try {
     const access = await resolveMobileAccess(request);
     if (!access) return mobileResponse({ error: "Sesión no válida." }, 401);
-    return mobileResponse(await action(access.membership.barbershopId));
+    return mobileResponse(await action(access.membership.barbershopId, access));
   } catch (error) {
     if (error instanceof MobileBookingError) return mobileResponse({ error: error.message }, error.status);
     if (error instanceof z.ZodError) return mobileResponse({ error: "Revisa los datos ingresados." }, 400);

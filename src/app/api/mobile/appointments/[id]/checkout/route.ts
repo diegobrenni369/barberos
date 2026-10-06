@@ -1,7 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { CheckoutError, registerCheckout } from "@/lib/checkout";
-import { mobileResponse, resolveMobileAccess } from "@/lib/mobile-auth";
+import { mobileResponse, resolveMobileAccess, mobileBarberScope } from "@/lib/mobile-auth";
 import { prisma } from "@/lib/prisma";
 import { logFailure } from "@/lib/safe-logging";
 
@@ -29,7 +29,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     if (!parsed.success) return mobileResponse({ error: "Método no válido." }, 400);
     const { id } = await context.params;
     const { barbershopId } = access.membership;
-    const appointment = await prisma.appointment.findFirst({ where: { id, barbershopId }, select: { updatedAt: true } });
+    const appointment = await prisma.appointment.findFirst({ where: { id, barbershopId, ...mobileBarberScope(access) }, select: { updatedAt: true } });
     if (!appointment) return mobileResponse({ error: "Reserva no encontrada." }, 404);
     await registerCheckout(prisma, barbershopId, { appointmentId: id, expectedUpdatedAt: appointment.updatedAt.toISOString(), discountAmount: "0", method: parsed.data.paymentMethod });
     revalidatePath("/agenda"); revalidatePath("/dashboard"); revalidatePath("/cash");
