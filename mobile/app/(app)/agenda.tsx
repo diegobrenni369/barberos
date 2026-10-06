@@ -22,10 +22,16 @@ export default function Agenda() {
   const [busy, setBusy] = useState(false);
   const [logoutError, setLogoutError] = useState("");
   const [appointment, setAppointment] = useState<MobileAppointment | null>(null);
+  function checkoutDone(id: string) {
+    const update = (item: MobileAppointment): MobileAppointment => item.id === id ? { ...item, status: "COMPLETED", canCharge: false, canChangeStatus: false, paymentLabel: "Pagada" } : item;
+    setData(current => current ? { ...current, appointments: current.appointments.map(update) } : current);
+    setAppointment(current => current ? update(current) : current);
+    setRetry(value => value + 1);
+  }
   function statusChanged(id: string, status: "CONFIRMED" | "CANCELLED" | "NO_SHOW") {
-    setData(current => current ? { ...current, appointments: current.appointments.flatMap(item => item.id !== id ? [item] : status === "CANCELLED" ? [] : [{ ...item, status, canChangeStatus: status === "CONFIRMED" }]) } : current);
+    setData(current => current ? { ...current, appointments: current.appointments.flatMap(item => item.id !== id ? [item] : status === "CANCELLED" ? [] : [{ ...item, status, canChangeStatus: status === "CONFIRMED", canCharge: status === "CONFIRMED" && item.canCharge }]) } : current);
     if (status === "CANCELLED") setAppointment(null);
-    else setAppointment(current => current?.id === id ? { ...current, status, canChangeStatus: status === "CONFIRMED" } : current);
+    else setAppointment(current => current?.id === id ? { ...current, status, canChangeStatus: status === "CONFIRMED", canCharge: status === "CONFIRMED" && current.canCharge } : current);
   }
   useEffect(() => {
     let active = true;
@@ -67,7 +73,7 @@ export default function Agenda() {
       {!!logoutError && <Text accessibilityRole="alert" style={styles.error}>{logoutError}</Text>}
       <Button title="Cerrar sesión" variant="ghost" loading={busy} onPress={() => void signOut()} />
     </View>
-    {appointment && <AppointmentSheet key={appointment.id} appointment={appointment} timezone={timezone} onClose={() => setAppointment(null)} onChanged={statusChanged} onRefresh={() => setRetry(value => value + 1)} />}
+    {appointment && <AppointmentSheet key={appointment.id} appointment={appointment} timezone={timezone} onClose={() => setAppointment(null)} onChanged={statusChanged} onRefresh={() => setRetry(value => value + 1)} onPaid={checkoutDone} />}
     <Modal visible={picker} animationType="slide" onRequestClose={() => setPicker(false)}>
       <SafeAreaView style={styles.screen}><ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Profesional</Text>
