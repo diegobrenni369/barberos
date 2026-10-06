@@ -5,6 +5,7 @@ import { useAuth } from "../lib/auth";
 import { ApiError } from "../lib/api";
 import { timeLabel } from "../lib/agenda";
 import { Button, Card, Input, colors, styles } from "./ui";
+import { Check } from "./chevron";
 import { CompactSelect, DateControl, SearchIcon, SelectRow, PickerSurface, readableDate } from "./creation-controls";
 
 export type CreateMode = "appointment" | "block" | "day";
@@ -86,7 +87,7 @@ function BookingForm({ barberId, initialDate, onCreated, setPending }: Props & {
           </View>
           <ScrollView keyboardShouldPersistTaps="handled" style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}>
             {loading && <ActivityIndicator accessibilityLabel="Buscando clientes" />}
-            {!loading && !error && customers.map(item => <Pressable key={item.id} accessibilityRole="button" accessibilityState={{ selected: customer?.id === item.id }} onPress={() => { setCustomer(item); setIsNew(false); setCustomerPicker(false); }} style={{ minHeight: 52, paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1, borderColor: colors.border, backgroundColor: customer?.id === item.id ? colors.soft : colors.background, flexDirection: "row", alignItems: "center", gap: 8 }}><View style={{ flex: 1, gap: 3 }}><Text style={styles.label}>{item.name}</Text><Text style={[styles.muted, { fontSize: 12 }]}>{item.phone ?? "Sin teléfono"}</Text></View>{customer?.id === item.id && <Text accessibilityLabel="Seleccionado">✓</Text>}</Pressable>)}
+            {!loading && !error && customers.map(item => <Pressable key={item.id} accessibilityRole="button" accessibilityState={{ selected: customer?.id === item.id }} onPress={() => { setCustomer(item); setIsNew(false); setCustomerPicker(false); }} style={{ minHeight: 52, paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1, borderColor: colors.border, backgroundColor: customer?.id === item.id ? colors.soft : colors.background, flexDirection: "row", alignItems: "center", gap: 8 }}><View style={{ flex: 1, gap: 3 }}><Text style={styles.label}>{item.name}</Text><Text style={[styles.muted, { fontSize: 12 }]}>{item.phone ?? "Sin teléfono"}</Text></View>{customer?.id === item.id && <Check />}</Pressable>)}
             {!loading && !error && !customers.length && <Text style={styles.muted}>No se encontraron clientes.</Text>}
             {!!error && <View style={{ gap: 8 }}><Text accessibilityRole="alert" style={styles.error}>{error}</Text><Button title="Reintentar" secondary onPress={() => setReload(value => value + 1)} /></View>}
           </ScrollView>

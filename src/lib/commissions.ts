@@ -57,10 +57,10 @@ export async function settleCommissions(db: PrismaClient, barbershopId: string, 
   }
 }
 
-export async function getCommissions(db: PrismaClient, barbershopId: string, period: ReturnType<typeof commissionPeriod>) {
+export async function getCommissions(db: PrismaClient, barbershopId: string, period: ReturnType<typeof commissionPeriod>, barberId?: string) {
   const [rows, settlements] = await Promise.all([
-    db.commission.findMany({ where: commissionScope(barbershopId, period), include: { barber: { select: { name: true } }, sale: { include: { items: true } }, settlementItem: { include: { settlement: { select: { status: true } } } } }, orderBy: { sale: { createdAt: "asc" } } }),
-    db.commissionSettlement.findMany({ where: { barbershopId, status: "PAID", paidAt: { gte: period.from, lt: period.to } }, include: { items: { orderBy: { saleAt: "asc" } } }, orderBy: { paidAt: "desc" } }),
+    db.commission.findMany({ where: { ...commissionScope(barbershopId, period), ...(barberId ? { barberId } : {}) }, include: { barber: { select: { name: true } }, sale: { include: { items: true } }, settlementItem: { include: { settlement: { select: { status: true } } } } }, orderBy: { sale: { createdAt: "asc" } } }),
+    db.commissionSettlement.findMany({ where: { barbershopId, ...(barberId ? { barberId } : {}), status: "PAID", paidAt: { gte: period.from, lt: period.to } }, include: { items: { orderBy: { saleAt: "asc" } } }, orderBy: { paidAt: "desc" } }),
   ]);
   const pending = rows.filter(row => row.settlementItem?.settlement.status !== "PAID");
   return { rows, settlements, sales: sumMoney(rows.map(row => row.baseAmount)), commission: sumMoney(rows.map(row => row.amount)), pending: sumMoney(pending.map(row => row.amount)), paid: sumMoney(settlements.map(row => row.totalCommission)) };

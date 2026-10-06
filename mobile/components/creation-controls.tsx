@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Chevron } from "./chevron";
+import { Check, Chevron } from "./chevron";
 import { Button, colors, styles } from "./ui";
 
 export const readableDate = (date: string) => new Intl.DateTimeFormat("es-CL", { timeZone: "UTC", weekday: "long", day: "numeric", month: "long" }).format(new Date(`${date}T12:00:00Z`));
@@ -14,11 +14,11 @@ export function PickerSurface({ title, onClose, children }: { title: string; onC
 export function SelectRow({ label, value, detail, onPress, disabled }: { label: string; value: string; detail?: string; onPress: () => void; disabled?: boolean }) {
   return <View style={{ gap: 6 }}><Text style={[styles.muted, { fontSize: 12 }]}>{label}</Text><Pressable accessibilityRole="button" accessibilityLabel={`${label}: ${value}`} disabled={disabled} onPress={onPress} style={{ minHeight: 48, paddingVertical: 10, paddingHorizontal: 12, borderWidth: 1, borderColor: colors.border, borderRadius: 10, flexDirection: "row", gap: 8, alignItems: "center", opacity: disabled ? 0.5 : 1 }}><View style={{ flex: 1, gap: 3 }}><Text style={styles.label}>{value}</Text>{!!detail && <Text style={[styles.muted, { fontSize: 12 }]}>{detail}</Text>}</View><Chevron direction="down" size={20} /></Pressable></View>;
 }
-export function CompactSelect({ label, value, options, onChange, disabled }: { label: string; value: string; options: { id: string; title: string; detail?: string }[]; onChange: (id: string) => void; disabled?: boolean }) {
+export function CompactSelect({ label, value, options, onChange, disabled, selectedIcon = <Check /> }: { label: string; value: string; options: { id: string; title: string; detail?: string }[]; onChange: (id: string) => void; disabled?: boolean; selectedIcon?: ReactNode }) {
   const [open, setOpen] = useState(false);
   const selected = options.find(item => item.id === value);
   return <><SelectRow label={label} value={selected?.title ?? "Seleccionar"} detail={selected?.detail} disabled={disabled || !options.length} onPress={() => setOpen(true)} />
-    {open && <PickerSurface title={label} onClose={() => setOpen(false)}><ScrollView contentContainerStyle={{ padding: 16 }}>{options.map(item => <Pressable key={item.id} accessibilityRole="button" accessibilityState={{ selected: item.id === value }} onPress={() => { onChange(item.id); setOpen(false); }} style={{ minHeight: 52, padding: 12, borderBottomWidth: 1, borderColor: colors.border, backgroundColor: item.id === value ? colors.soft : colors.background, flexDirection: "row", gap: 12, alignItems: "center" }}><View style={{ flex: 1, gap: 3 }}><Text style={styles.label}>{item.title}</Text>{!!item.detail && <Text style={[styles.muted, { fontSize: 12 }]}>{item.detail}</Text>}</View>{item.id === value && <Text>✓</Text>}</Pressable>)}</ScrollView></PickerSurface>}
+    {open && <PickerSurface title={label} onClose={() => setOpen(false)}><ScrollView contentContainerStyle={{ padding: 16 }}>{options.map(item => <Pressable key={item.id} accessibilityRole="button" accessibilityState={{ selected: item.id === value }} onPress={() => { onChange(item.id); setOpen(false); }} style={{ minHeight: 52, padding: 12, borderBottomWidth: 1, borderColor: colors.border, backgroundColor: item.id === value ? colors.soft : colors.background, flexDirection: "row", gap: 12, alignItems: "center" }}><View style={{ flex: 1, gap: 3 }}><Text style={styles.label}>{item.title}</Text>{!!item.detail && <Text style={[styles.muted, { fontSize: 12 }]}>{item.detail}</Text>}</View>{item.id === value && selectedIcon}</Pressable>)}</ScrollView></PickerSurface>}
   </>;
 }
 export function DateControl({ date, onChange }: { date: string; onChange: (date: string) => void }) {
