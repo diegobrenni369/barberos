@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { mobileResponse, resolveMobileAccess, mobileBarberInput } from "@/lib/mobile-auth";
-import { commissionPeriod, getCommissions, SettlementError } from "@/lib/commissions";
+import { commissionPeriod, getCommissions, sumMoney, SettlementError } from "@/lib/commissions";
 import { utcToZonedParts } from "@/lib/agenda";
 
 export const runtime = "nodejs";
@@ -35,7 +35,9 @@ export async function GET(request: Request) {
       getCommissions(prisma, barbershopId, period, barber.id),
       prisma.barbershop.findUniqueOrThrow({ where: { id: barbershopId }, select: { currency: true } }),
     ]);
+    const eligible = report.rows.filter(row => !row.settlementItem);
     return mobileResponse({ barber, timezone: barbershop.timezone, currency: shop.currency, from: period.start, to: period.end,
+      settlement: access.role === "OWNER" ? { count: eligible.length, total: sumMoney(eligible.map(row => row.amount)).toString() } : null,
       summary: { sales: report.sales.toString(), generated: report.commission.toString(), pending: report.pending.toString(), paid: report.paid.toString() },
       rows: report.rows.slice().reverse().map(row => ({ id: row.id, date: row.sale.createdAt.toISOString(), service: row.sale.items.map(item => item.description).join(" · "), customer: row.sale.customerName, base: row.baseAmount.toString(), rate: row.rate.toString(), amount: row.amount.toString(), currency: row.sale.currency, paid: row.settlementItem?.settlement.status === "PAID" })),
     });
