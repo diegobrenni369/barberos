@@ -1,10 +1,18 @@
-# BarberOS mobile — M0 + M1
+# BarberOS mobile — M0 + M1 + M2
 
 Aplicación independiente con Expo Router y TypeScript. M0 implementa autenticación y M1 muestra la agenda real de un profesional a la vez, en modo de solo lectura.
 
 ## Agenda M1
 
-`GET /api/mobile/agenda?date=YYYY-MM-DD&barberId=...` exige bearer válido y OWNER. Resuelve el tenant desde la sesión y rechaza profesionales ajenos o inactivos. Reutiliza los helpers web de timezone y disponibilidad. No expone notas, contactos ni información financiera.
+`GET /api/mobile/agenda?date=YYYY-MM-DD&barberId=...` exige bearer válido y OWNER. Resuelve el tenant desde la sesión y rechaza profesionales ajenos o inactivos. Reutiliza los helpers web de timezone y disponibilidad. M2 incluye teléfono, notas y precio de la cita únicamente para el detalle autenticado.
+
+## Detalle y acciones M2
+
+Tocar una reserva abre un sheet nativo sin dependencias nuevas. Se cierra con el botón, toque exterior o deslizando hacia abajo desde el tirador superior. El cierre se bloquea mientras se guarda. Cancelar y No asistió piden confirmación nativa.
+
+`PATCH /api/mobile/appointments/[id]/status` admite CONFIRMED desde SCHEDULED y CANCELLED/NO_SHOW desde SCHEDULED o CONFIRMED. No agrega restricción temporal a No asistió: mantiene la regla web actual. Rechaza citas con venta, relaciones inactivas y transiciones terminales. Reutiliza validación de horario y sincronización de recordatorios dentro de una transacción; no ofrece completar, cobrar ni reprogramar.
+
+La respuesta actualiza la tarjeta y el badge sin cambiar fecha ni profesional; canceladas se ocultan. La prueba puntual `npx tsx scripts/check-mobile-status.ts` requiere el servidor local en puerto 3000, comprueba HTTP y elimina sus fixtures. La interacción táctil en dispositivo sigue pendiente.
 
 La app permite anterior/Hoy/siguiente y selección mediante modal, conserva el profesional en estado local al cambiar fecha, muestra reservas (excepto canceladas), descansos y bloqueos. La timeline es un resumen cronológico por hora, no una grilla proporcional ni interactiva. Incluye carga, error/reintento y estados vacíos; descarta respuestas obsoletas al navegar rápidamente. No añade dependencias.
 

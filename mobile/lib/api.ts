@@ -4,7 +4,7 @@ export class ApiError extends Error {
   constructor(message: string, public status: number) { super(message); }
 }
 
-export async function request<T>(path: string, options: { token?: string; method?: "GET" | "POST"; body?: unknown } = {}): Promise<T> {
+export async function request<T>(path: string, options: { token?: string; method?: "GET" | "POST" | "PATCH"; body?: unknown } = {}): Promise<T> {
   if (!configuredUrl) throw new ApiError("Configura EXPO_PUBLIC_API_URL para conectar con BarberOS.", 0);
   const url = new URL(configuredUrl);
   if ((url.protocol !== "https:" && !( __DEV__ && url.protocol === "http:")) || url.username || url.password || url.search || url.hash) {

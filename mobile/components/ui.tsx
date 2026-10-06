@@ -2,8 +2,9 @@ import { useState, type ReactNode } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View, type TextInputProps, type ViewProps } from "react-native";
 
 export const colors = { background: "#ffffff", text: "#171717", muted: "#737373", border: "#e5e5e5", soft: "#f5f5f5", error: "#b91c1c" };
-export function Button({ title, onPress, disabled, loading, secondary = false }: { title: string; onPress: () => void; disabled?: boolean; loading?: boolean; secondary?: boolean }) {
-  return <Pressable accessibilityRole="button" accessibilityState={{ disabled: disabled || loading, busy: loading }} disabled={disabled || loading} onPress={onPress} style={({ pressed }) => [styles.button, secondary && styles.secondary, { opacity: disabled || loading ? 0.5 : pressed ? 0.8 : 1 }]}>{loading ? <ActivityIndicator color={secondary ? colors.text : "white"} /> : <Text style={[styles.buttonText, secondary && { color: colors.text }]}>{title}</Text>}</Pressable>;
+export function Button({ title, onPress, disabled, loading, secondary = false, variant, compact = false }: { title: string; onPress: () => void; disabled?: boolean; loading?: boolean; secondary?: boolean; variant?: "ghost" | "destructive"; compact?: boolean }) {
+  const foreground = variant === "destructive" ? colors.error : variant === "ghost" ? colors.muted : secondary ? colors.text : "white";
+  return <Pressable accessibilityRole="button" accessibilityState={{ disabled: disabled || loading, busy: loading }} disabled={disabled || loading} onPress={onPress} style={({ pressed }) => [styles.button, secondary && styles.secondary, compact && { minHeight: 44, minWidth: 44, padding: 10 }, variant === "ghost" && { backgroundColor: "transparent", borderWidth: 0 }, variant === "destructive" && { backgroundColor: "#fff7f7", borderWidth: 1, borderColor: "#fee2e2" }, { opacity: disabled || loading ? 0.5 : pressed ? 0.8 : 1 }]}>{loading ? <ActivityIndicator color={foreground} /> : <Text style={[styles.buttonText, { color: foreground }]}>{title}</Text>}</Pressable>;
 }
 export function Input({ label, style, ...props }: TextInputProps & { label: string }) {
   const [focused, setFocused] = useState(false);
