@@ -3,7 +3,7 @@ import * as SecureStore from "expo-secure-store";
 import { ApiError, request } from "./api";
 
 type Session = { user: { id: string; name: string; email: string }; barbershop: { id: string; name: string; timezone: string }; expiresAt: string };
-type Auth = { session: Session | null; loading: boolean; error: string; restore: () => Promise<void>; login: (email: string, password: string) => Promise<void>; logout: () => Promise<void>; get: <T>(path: string) => Promise<T> };
+type Auth = { session: Session | null; loading: boolean; error: string; restore: () => Promise<void>; login: (email: string, password: string) => Promise<void>; logout: () => Promise<void>; get: <T>(path: string, options?: { method: "PATCH"; body: unknown }) => Promise<T> };
 const Context = createContext<Auth | null>(null);
 const KEY = "barberos.mobile.session";
 const options = { keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY };
@@ -49,10 +49,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await SecureStore.deleteItemAsync(KEY);
     token.current = null; setSession(null);
   }
-  const get = useCallback(async <T,>(path: string): Promise<T> => {
+  const get = useCallback(async <T,>(path: string, options?: { method: "PATCH"; body: unknown }): Promise<T> => {
     const current = token.current;
     if (!current) throw new ApiError("Sesión no válida.", 401);
-    try { return await request<T>(path, { token: current }); }
+    try { return await request<T>(path, { ...options, token: current }); }
     catch (failure) {
       if (failure instanceof ApiError && failure.status === 401 && token.current === current) {
         token.current = null; setSession(null);

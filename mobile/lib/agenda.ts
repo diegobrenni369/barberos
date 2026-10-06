@@ -1,10 +1,11 @@
 export type Interval = { startMinute: number; endMinute: number };
+export type MobileAppointment = Interval & { id: string; customerName: string; serviceName: string; status: "SCHEDULED" | "CONFIRMED" | "COMPLETED" | "NO_SHOW" | "CANCELLED"; phone: string | null; notes: string | null; price: string; currency: string; barberName: string; startsAt: string; endsAt: string; canChangeStatus: boolean };
 export type AgendaData = {
   date: string; today: string; barberId: string | null;
   barbers: { id: string; name: string }[];
   businessHour: { isClosed: boolean; opensMinute: number; closesMinute: number } | null;
   availability: Interval[];
-  appointments: (Interval & { id: string; customerName: string; serviceName: string; status: "SCHEDULED" | "CONFIRMED" | "COMPLETED" | "NO_SHOW" })[];
+  appointments: MobileAppointment[];
   breaks: (Interval & { id: string; label: string | null })[];
   blocks: (Interval & { id: string; label: string })[];
 };
