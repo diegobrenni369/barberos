@@ -1,6 +1,6 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useFocusEffect } from "expo-router";
-import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../lib/auth";
 import { useSelectedBarber } from "../../lib/selected-barber";
@@ -13,6 +13,7 @@ import { Chevron } from "../../components/chevron";
 type Report = {
   barber: { id: string; name: string }; timezone: string; currency: string; from: string; to: string;
   summary: { sales: string; generated: string; pending: string; paid: string };
+  settlement?: { count: number; total: string } | null;
   rows: { id: string; date: string; service: string; customer: string; base: string; rate: string; amount: string; currency: string; paid: boolean }[];
 };
 const periods = [{ id: "week", title: "Esta semana" }, { id: "previous-week", title: "Semana anterior" }, { id: "fortnight", title: "Quincena actual" }, { id: "month", title: "Este mes" }, { id: "custom", title: "Personalizado" }];
@@ -51,6 +52,10 @@ export default function Commissions() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);
+  const settling = useRef(false);
+  const [settlementBusy, setSettlementBusy] = useState(false);
+  const [settlementMessage, setSettlementMessage] = useState("");
+  const [settlementError, setSettlementError] = useState("");
   const invalidRange = period === "custom" && from > to;
   useFocusEffect(useCallback(() => {
     let active = true;
@@ -65,6 +70,26 @@ export default function Commissions() {
     return () => { active = false; };
   }, [barberId, from, to, period, invalidRange, get, retry]));
   const money = (value: string, currency: string) => new Intl.NumberFormat("es-CL", { style: "currency", currency }).format(Number(value));
+  function confirmSettlement() {
+    if (!owner || !report?.settlement?.count || settling.current) return;
+    const snapshot = report;
+    Alert.alert("¿Marcar como pagadas?", `${snapshot.barber.name}\n${readableDate(snapshot.from)} – ${readableDate(snapshot.to)}\n${snapshot.settlement!.count} comisiones pendientes\nTotal a liquidar: ${money(snapshot.settlement!.total, snapshot.currency)}\n\nEsto registra la liquidación en BarberOS. No realiza una transferencia de dinero.`, [
+      { text: "Cancelar", style: "cancel" },
+      { text: "Confirmar pago", onPress: () => void settle(snapshot) },
+    ]);
+  }
+  async function settle(snapshot: Report) {
+    if (!owner || settling.current) return;
+    settling.current = true; setSettlementBusy(true); setSettlementError(""); setSettlementMessage("");
+    try {
+      await get("/api/mobile/commissions/settle", { method: "POST", body: { barberId: snapshot.barber.id, from: snapshot.from, to: snapshot.to } });
+      setSettlementMessage("Liquidación registrada.");
+    } catch (failure) {
+      setSettlementError(failure instanceof ApiError && failure.status === 409 ? "Las comisiones cambiaron o no quedan pendientes. Revisa el resumen actualizado." : failure instanceof ApiError && failure.status === 403 ? "Solo el propietario puede registrar liquidaciones." : "No se pudo confirmar la liquidación. Revisa el resumen antes de reintentar.");
+    } finally {
+      settling.current = false; setSettlementBusy(false); setRetry(value => value + 1);
+    }
+  }
   return <SafeAreaView edges={["top", "left", "right"]} style={styles.screen}>
     <FlatList data={report?.rows ?? []} keyExtractor={item => item.id} contentContainerStyle={[styles.content, { padding: 16, gap: 0 }]}
       ListHeaderComponent={<View style={{ gap: 16 }}>
@@ -84,12 +109,15 @@ export default function Commissions() {
         {invalidRange && <Text accessibilityRole="alert" style={styles.error}>La fecha de inicio debe ser anterior o igual al término.</Text>}
         {loading && <ActivityIndicator accessibilityLabel="Cargando comisiones" />}
         {!!error && <><Text accessibilityRole="alert" style={styles.error}>{error}</Text><Button title="Reintentar" secondary onPress={() => setRetry(value => value + 1)} /></>}
+        {!!settlementMessage && <Text accessibilityRole="alert" style={styles.muted}>{settlementMessage}</Text>}
+        {!!settlementError && <Text accessibilityRole="alert" style={styles.error}>{settlementError}</Text>}
         {report && <>
           <Text style={[styles.muted, { fontSize: 12 }]}>{readableDate(report.from)} – {readableDate(report.to)}</Text>
           <Card><Text style={styles.subtitle}>Resumen</Text><View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 14 }}>{[
             ["Ventas asociadas", report.summary.sales], ["Comisión generada", report.summary.generated], ["Comisión pendiente", report.summary.pending], ["Comisión pagada", report.summary.paid],
           ].map(([label, value]) => <View key={label} style={{ width: "48%", gap: 4 }}><Text style={[styles.muted, { fontSize: 11 }]}>{label}</Text><Text style={[styles.label, { fontSize: 17, fontWeight: "600", fontVariant: ["tabular-nums"] }]}>{money(value, report.currency)}</Text></View>)}</View></Card>
           <Text style={[styles.muted, { fontSize: 11, lineHeight: 16 }]}>Ventas y pendientes por fecha de venta. Pagada por fecha de liquidación.</Text>
+          {owner && !!report.settlement?.count && Number(report.settlement.total) > 0 && <Button title="Marcar como pagadas" secondary loading={settlementBusy} disabled={settlementBusy || loading || invalidRange || report.barber.id !== barberId} onPress={confirmSettlement} />}
           <Text style={styles.subtitle}>Detalle</Text>
         </>}
       </View>}
