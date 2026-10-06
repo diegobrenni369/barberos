@@ -1,6 +1,7 @@
 "use server";
 
-import { AppointmentStatus, MembershipRole, Prisma } from "@prisma/client";
+import { MembershipRole, Prisma } from "@prisma/client";
+import { ensureNoActiveAppointment } from "@/lib/barber-blocks";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -70,11 +71,6 @@ async function blockData(formData: FormData, mode: "create" | "update") {
   }
   if (startsAt >= endsAt) agendaFail(data.date, "La hora de inicio debe ser anterior a la hora de término");
   return { membership, data, startsAt, endsAt };
-}
-
-async function ensureNoActiveAppointment(tx: Prisma.TransactionClient, barbershopId: string, barberId: string, startsAt: Date, endsAt: Date) {
-  const appointment = await tx.appointment.findFirst({ where: { barbershopId, barberId, status: { in: [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED] }, startsAt: { lt: endsAt }, endsAt: { gt: startsAt } }, select: { id: true } });
-  if (appointment) throw new Error("ACTIVE_APPOINTMENT");
 }
 
 export async function createBarberBlock(formData: FormData) {
