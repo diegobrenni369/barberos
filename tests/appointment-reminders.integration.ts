@@ -70,11 +70,14 @@ async function main() {
     assert.equal(await findPublicAppointment(db, tenant, token, a.startsAt), null);
     await assert.rejects(issue(past.id));
     assert.equal(await respondToAppointment(db, other, token, "confirm", now), false);
+    await db.appointment.update({ where: { id: a.id }, data: { status: "SCHEDULED", customerConfirmedAt: null } });
     assert.equal(await respondToAppointment(db, tenant, token, "confirm", now), true);
+    const firstConfirmation = await db.appointment.findUniqueOrThrow({ where: { id: a.id } });
     assert.equal(await respondToAppointment(db, tenant, token, "confirm", new Date(+now + 1000)), true);
     const confirmed = await db.appointment.findUniqueOrThrow({ where: { id: a.id } });
     assert.equal(confirmed.status, "CONFIRMED");
     assert.equal(+confirmed.customerConfirmedAt!, +now);
+    assert.equal(+confirmed.updatedAt, +firstConfirmation.updatedAt);
     pass("secure token, hashing, tenant isolation, expiration and idempotent confirmation");
     await assert.rejects(db.appointmentPublicAccess.create({ data: { appointmentId: a.id, barbershopId: other, revision: 0, tokenHash: randomUUID(), expiresAt: a.startsAt } }));
     pass("composite tenant foreign key rejects cross-tenant link");

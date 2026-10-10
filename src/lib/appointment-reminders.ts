@@ -72,7 +72,9 @@ export async function respondToAppointment(db: PrismaClient, slug: string, token
     const a = await findPublicAppointment(tx, slug, token, actionTime);
     if (!a) return false;
     if (action === "confirm") {
-      await tx.appointment.updateMany({ where: { id: a.id, barbershopId: a.barbershopId, customerConfirmedAt: null }, data: { customerConfirmedAt: actionTime } });
+      if (a.status !== "CONFIRMED" || !a.customerConfirmedAt) {
+        await tx.appointment.update({ where: { id: a.id, barbershopId: a.barbershopId }, data: { status: "CONFIRMED", customerConfirmedAt: a.customerConfirmedAt ?? actionTime } });
+      }
     } else {
       await tx.appointment.update({ where: { id: a.id, barbershopId: a.barbershopId }, data: { status: "CANCELLED" } });
       await syncAppointmentReminders(tx, a.barbershopId, a.id, a, actionTime);

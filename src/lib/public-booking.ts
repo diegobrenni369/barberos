@@ -91,7 +91,7 @@ export async function confirmPublicBooking(db: PrismaClient, raw: unknown, now =
         const customer = await matchOrCreateCustomer(tx, day.shop.id, input);
         const appointment = await tx.appointment.create({ data: {
           barbershopId: day.shop.id, customerId: customer.id, barberId: selected.barber.id, serviceId: day.service.id,
-          startsAt: selected.startsAt, endsAt: selected.endsAt, price: day.service.price, status: "CONFIRMED", source: "ONLINE",
+          startsAt: selected.startsAt, endsAt: selected.endsAt, price: day.service.price, status: "SCHEDULED", customerConfirmedAt: null, source: "ONLINE",
         } });
         await syncAppointmentReminders(tx, day.shop.id, appointment.id, undefined, now);
         return { shop: day.shop.name, service: day.service.name, barber: selected.barber.name, date: input.date, time: input.time };

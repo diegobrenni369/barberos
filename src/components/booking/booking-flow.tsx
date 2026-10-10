@@ -83,7 +83,7 @@ export function BookingFlow({ address, slug, currency, services, barbers, today,
   }
 
   if (confirmation) return <Card className="border border-border ring-0"><CardContent className="space-y-6 py-3" role="status">
-    <div className="space-y-3"><CheckCircle2 className="size-9 text-emerald-600" /><h2 className="text-2xl font-semibold tracking-tight">Tu reserva está confirmada</h2></div>
+    <div className="space-y-3"><CheckCircle2 className="size-9 text-emerald-600" /><h2 className="text-2xl font-semibold tracking-tight">Tu reserva está agendada</h2></div>
     <p className="break-words text-lg font-medium">{confirmation.service}</p>
     <div className="space-y-1"><p>{dateLabel(confirmation.date)}</p><p className="font-medium tabular-nums">{timeRange(confirmation.time, service?.durationMinutes ?? 0)}</p></div>
     <p className="break-words">{confirmation.barber}</p>
