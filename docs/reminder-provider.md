@@ -117,6 +117,58 @@ operational-dashboard, commissions y barber-service. Fixtures temporales se limp
 
 ## Pendientes antes de habilitar Twilio
 
+### M9 — checklist de activación del piloto
+
+- Nueva reserva pública: SCHEDULED, customerConfirmedAt null, source ONLINE.
+  El enlace válido pasa a CONFIRMED y registra la primera confirmación; repetir
+  no cambia timestamps. No hay cancelación automática por falta de confirmación.
+- Mantener NOTIFICATION_PROVIDER=mock hasta completar la preparación externa.
+  Mock también consume recordatorios y los marca SENT: usar citas de prueba;
+  cambiar a Twilio no reenvía los recordatorios consumidos por mock.
+- Configurar en Vercel NOTIFICATION_PROVIDER=twilio, REMINDER_PUBLIC_BASE_URL
+  (origen HTTPS público), CRON_SECRET (al menos 32 caracteres), TWILIO_ACCOUNT_SID,
+  TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_FROM (whatsapp:+E164),
+  TWILIO_TEMPLATE_FIRST_REMINDER y TWILIO_TEMPLATE_FINAL_REMINDER (HX...).
+  TWILIO_STATUS_CALLBACK_URL es opcional y debe coincidir exactamente con la URL
+  pública /api/webhooks/twilio/whatsapp/status. No usar secretos NEXT_PUBLIC.
+  El origen también admite APP_URL y NEXT_PUBLIC_APP_URL como fallbacks existentes;
+  preferir REMINDER_PUBLIC_BASE_URL explícito para piloto.
+- Ambos ContentSid reciben las mismas variables: 1 barbería, 2 cliente,
+  3 servicio, 4 profesional, 5 fecha local YYYY-MM-DD, 6 hora local HH:mm,
+  7 URL completa segura de gestión. El final puede ser breve; conservar el contrato
+  existente y probar el template aprobado con esos datos. No asumir que 7 es
+  un sufijo de botón URL: el adapter envía una URL completa.
+- Habilitar remitente WhatsApp y templates aprobados en Twilio; verificar cuenta,
+  saldo/upgrade si corresponde y consentimiento de destinatarios de prueba.
+  El sandbox no equivale a un remitente de producción. No se verificó el estado
+  de la cuenta ni se activaron servicios desde esta implementación.
+- Probar primero con destinatario autorizado: envío, enlace de confirmación,
+  cancelación y callback firmado con deliveryStatus. Revisar redacción de URLs
+  /manage y secretos en logs del hosting/proxy/APM.
+- Activar manualmente GET /api/internal/reminders/process cada 5 minutos
+  (*/5 * * * *), con Authorization: Bearer <CRON_SECRET>. POST también funciona.
+  Vercel Cron usa GET y agrega el header desde CRON_SECRET; no requiere cambiar
+  el endpoint. No se agregó vercel.json ni se activó cron automáticamente.
+  Hobby no permite esta frecuencia; requiere plan compatible o scheduler externo.
+  Revisar duración de función: hasta 50 envíos secuenciales con timeout de 10 s
+  por envío pueden superar el presupuesto de ejecución del hosting.
+- FIRST_REMINDER se agenda a -24 h y FINAL_REMINDER a -2 h solo si esa hora aún
+  es futura al reservar/reprogramar. Reservas con menos de 2 h no generan esos
+  recordatorios; no se añadió envío inmediato. FINAL no excluye citas confirmadas.
+- Cancelar/reprogramar cancela pendientes y revoca enlaces; SENT conserva historial.
+  Los envíos ambiguos no se reintentan ciegamente: reconciliar con Twilio.
+  Un mensaje ya en tránsito no puede retirarse al cancelar.
+- Validación de esta entrega: lint y TypeScript; pruebas de regresión actualizadas,
+  pero no ejecutadas (sin suites ni envíos reales). Antes de piloto comprobar
+  booking → SCHEDULED/null → enlace → CONFIRMED/timestamp estable; cancelación;
+  no envío para CANCELLED; reprogramación; y prueba real Twilio autorizada.
+
+Referencias de activación:
+- https://vercel.com/docs/cron-jobs/manage-cron-jobs
+- https://vercel.com/docs/cron-jobs/usage-and-pricing
+- https://www.twilio.com/docs/whatsapp/api
+- https://www.twilio.com/docs/whatsapp/tutorial/send-whatsapp-notification-messages-templates
+
 1. Autorizar upgrade por separado y habilitar remitente WhatsApp central.
 2. Registrar/aprobar templates con el contrato anterior.
 3. Configurar secretos y dominio HTTPS en hosting; verificar URL detrás del proxy.

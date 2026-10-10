@@ -83,9 +83,9 @@ async function main() {
     passed("ANY rechecks candidates and assigns other barber when original occupied");
     const twoAny = await Promise.allSettled([confirmPublicBooking(db, request("16:00", null, "+56955555555"), now), confirmPublicBooking(db, request("16:00", null, "+56966666666"), now)]);
     assert.equal(twoAny.filter(result => result.status === "fulfilled").length, 2);
-    const assigned = await db.appointment.findMany({ where: { barbershopId: tenantId, startsAt: at("16:00") }, select: { barberId: true, source: true, status: true } });
+    const assigned = await db.appointment.findMany({ where: { barbershopId: tenantId, startsAt: at("16:00") }, select: { barberId: true, source: true, status: true, customerConfirmedAt: true } });
     assert.equal(new Set(assigned.map(row => row.barberId)).size, 2);
-    assert.ok(assigned.every(row => row.source === "ONLINE" && row.status === "CONFIRMED"));
+    assert.ok(assigned.every(row => row.source === "ONLINE" && row.status === "SCHEDULED" && row.customerConfirmedAt === null));
     passed("concurrent ANY uses two real barbers through serializable retries");
     await confirmPublicBooking(db, request("11:30", diego.id, "9 1111 1111"), now);
     const reused = await db.appointment.findFirstOrThrow({ where: { barbershopId: tenantId, startsAt: at("11:30") } });

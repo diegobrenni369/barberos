@@ -49,7 +49,7 @@ Teléfono obligatorio; normalización de separadores, prefijo 00 y números chil
 
 La página entrega solo nombre/dirección del negocio, servicios públicos (nombre/precio/duración y referencia de selección), profesionales activos (nombre y referencia), moneda y fechas habilitadas. La API no devuelve citas, clientes, emails/teléfonos de barberos, razones/notas de bloqueo ni etiquetas de descanso. Los errores inesperados se sustituyen por mensajes públicos genéricos; logs internos no incluyen datos de cliente.
 
-Appointment se crea CONFIRMED y source ONLINE, con un barberId real y precio del servicio leído en servidor. No se crea Sale, Payment ni Commission. Agenda usa las reservas del tenant por rango, sin excluir source ONLINE; su diseño y drag & drop no se modificaron.
+Appointment se crea SCHEDULED, customerConfirmedAt null y source ONLINE, con un barberId real y precio del servicio leído en servidor. La confirmación por enlace cambia a CONFIRMED y registra customerConfirmedAt. No se crea Sale, Payment ni Commission. Agenda usa las reservas del tenant por rango, sin excluir source ONLINE; su diseño y drag & drop no se modificaron.
 
 ## Preparación 6B y límites
 
