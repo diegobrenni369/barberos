@@ -9,7 +9,7 @@ export function AgendaWeek({ date, timezone, onChange, onToday, professional }: 
   const monday = moveDate(date, -weekday);
   const today = todayIn(timezone);
   const labels = ["lu", "ma", "mi", "ju", "vi", "sá", "do"];
-  return <View style={{ gap: 4 }} onLayout={event => setWidth(event.nativeEvent.layout.width)}>
+  return <View style={{ gap: 8 }} onLayout={event => setWidth(event.nativeEvent.layout.width)}>
     <View style={{ flexDirection: "row", alignItems: "center", gap: 8, transform: [{ translateY: 10 }] }}>
       <View style={{ flexShrink: 1, minWidth: 0, alignItems: "flex-start", marginRight: "auto" }}>{professional}</View>
       <Text style={[styles.muted, { fontSize: 12, flexShrink: 0 }]}>{new Intl.DateTimeFormat("es-CL", { timeZone: "UTC", month: "long", year: "numeric" }).format(new Date(`${date}T12:00:00Z`))}</Text>

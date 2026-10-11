@@ -1,6 +1,7 @@
 {
   "expo": {
-    "name": "BarberOS",
+    "name": "Tevno",
+    "icon": "./assets/branding/icon-1024.png",
     "slug": "barberos-mobile",
     "scheme": "barberos",
     "version": "0.1.0",

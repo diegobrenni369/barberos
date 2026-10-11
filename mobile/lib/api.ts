@@ -5,10 +5,10 @@ export class ApiError extends Error {
 }
 
 export async function request<T>(path: string, options: { token?: string; method?: "GET" | "POST" | "PATCH"; body?: unknown } = {}): Promise<T> {
-  if (!configuredUrl) throw new ApiError("Configura EXPO_PUBLIC_API_URL para conectar con BarberOS.", 0);
+  if (!configuredUrl) throw new ApiError("Configura EXPO_PUBLIC_API_URL para conectar con Tevno.", 0);
   const url = new URL(configuredUrl);
   if ((url.protocol !== "https:" && !( __DEV__ && url.protocol === "http:")) || url.username || url.password || url.search || url.hash) {
-    throw new ApiError("La URL de BarberOS no es válida. Usa HTTPS en producción.", 0);
+    throw new ApiError("La URL de Tevno no es válida. Usa HTTPS en producción.", 0);
   }
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
@@ -26,6 +26,6 @@ export async function request<T>(path: string, options: { token?: string; method
     return await response.json() as T;
   } catch (error) {
     if (error instanceof ApiError) throw error;
-    throw new ApiError("No se pudo conectar con BarberOS. Revisa tu conexión.", 0);
+    throw new ApiError("No se pudo conectar con Tevno. Revisa tu conexión.", 0);
   } finally { clearTimeout(timeout); }
 }

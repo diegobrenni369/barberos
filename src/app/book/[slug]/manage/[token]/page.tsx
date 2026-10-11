@@ -6,7 +6,7 @@ import { headers } from "next/headers";
 import { allowPublicRequest } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Tu reserva | BarberOS", robots: { index: false, follow: false }, referrer: "no-referrer" as const };
+export const metadata = { title: "Tu reserva | Tevno", robots: { index: false, follow: false }, referrer: "no-referrer" as const };
 
 export default async function ManagePage({ params }: { params: Promise<{ slug: string; token: string }> }) {
   const { slug, token } = await params;
@@ -24,6 +24,6 @@ export default async function ManagePage({ params }: { params: Promise<{ slug: s
         <ManageAppointment slug={slug} token={token} confirmed={!!appointment.customerConfirmedAt} summary={`${date} · ${time} · ${appointment.service.name}`} />
       </>}
     </section>
-    <p className="text-center text-xs text-muted-foreground">Reservas con BarberOS</p>
+    <p className="text-center text-xs text-muted-foreground">Reservas con Tevno</p>
   </div></main>;
 }
