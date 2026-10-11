@@ -25,16 +25,14 @@ export function BarberBlock({ block, gridStartMinute, gridEndMinute, onClick }: 
       className="absolute z-[8] overflow-hidden rounded-md text-left"
       style={{ left: EVENT_INSET, right: EVENT_INSET, paddingTop: EVENT_INSET, paddingBottom: EVENT_INSET, top: AGENDA_TOP_GUTTER + (visibleStart - gridStartMinute) * AGENDA_PIXELS_PER_MINUTE, height }}
     >
-      <div className="flex h-full min-w-0 flex-col justify-center overflow-hidden rounded-md border border-slate-300/70 bg-slate-100/85 px-2 text-xs text-slate-700 transition hover:bg-slate-100 dark:border-slate-700/60 dark:bg-slate-900/70 dark:text-slate-300">
+      <div className="flex h-full min-w-0 flex-col overflow-hidden rounded-md border border-slate-300/70 bg-slate-100/85 px-2 py-1 text-xs text-slate-700 transition hover:bg-slate-100 dark:border-slate-700/60 dark:bg-slate-900/70 dark:text-slate-300">
         <div className="flex min-w-0 items-center justify-between gap-2 leading-4">
           <span className="flex min-w-0 items-center gap-1 font-medium">
             <LockKeyhole className="size-3 shrink-0" />
-            <span className="truncate">{height < 40 ? block.reasonName : "Bloqueado"}</span>
+            <span className="truncate">Bloqueado · {block.reasonName}</span>
           </span>
           <span className="shrink-0 whitespace-nowrap text-[10px] tabular-nums opacity-70">{timeLabel}</span>
         </div>
-        {height >= 40 && <div className="truncate text-[11px] leading-4 opacity-75">{block.reasonName}</div>}
-        {height >= 64 && block.note && <div className="truncate text-[10px] leading-4 opacity-65">{block.note}</div>}
       </div>
     </button>
   );

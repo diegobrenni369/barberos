@@ -1,14 +1,15 @@
 import { ActionSurface, PickerSurface, SelectionOption } from "../../components/creation-controls";
 import { useAgendaScroll } from "../../lib/use-agenda-scroll";
 import { AgendaWeek } from "../../components/agenda-week";
-import { useEffect, useRef, useState } from "react";
-import { useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../lib/auth";
 import { useSelectedBarber } from "../../lib/selected-barber";
 import { ApiError } from "../../lib/api";
-import { type AgendaData, type MobileAppointment, todayIn } from "../../lib/agenda";
+import { type AgendaData, type MobileAppointment, type MobileBlock, todayIn } from "../../lib/agenda";
+import { BlockSheet } from "../../components/block-sheet";
 import { LoadingIndicator, Button, Card, EmptyState, colors, styles } from "../../components/ui";
 import { Chevron } from "../../components/chevron";
 import { AgendaTimeline } from "../../components/agenda-timeline";
@@ -29,6 +30,14 @@ export default function Agenda() {
   const [createMenu, setCreateMenu] = useState(false);
   const [createMode, setCreateMode] = useState<CreateMode | null>(null);
   const [notice, setNotice] = useState("");
+  const [block, setBlock] = useState<MobileBlock | null>(null);
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(""), 3000);
+    return () => clearTimeout(timer);
+  }, [notice]);
+  useEffect(() => { setNotice(""); setBlock(null); }, [date, barberId]);
+  useFocusEffect(useCallback(() => () => { setNotice(""); setBlock(null); }, []));
   const agendaScroll = useAgendaScroll(date, timezone, data?.barberId ?? barberId, !loading && !error && data?.date === date);
   const { pushDate, pushKey } = useLocalSearchParams<{ pushDate?: string; pushKey?: string }>();
   const handledPush = useRef<string | null>(null);
@@ -80,9 +89,10 @@ export default function Agenda() {
     </View>
     <ScrollView ref={agendaScroll.ref} onLayout={event => agendaScroll.setViewport(event.nativeEvent.layout.height)} onContentSizeChange={(_, height) => agendaScroll.setHeight(height)} onScroll={event => agendaScroll.onScroll(event.nativeEvent.contentOffset.y)} scrollEventThrottle={16} onScrollBeginDrag={agendaScroll.onDrag} style={{ flex: 1 }} contentContainerStyle={[styles.content, { paddingTop: 8, paddingHorizontal: 8, paddingBottom: 12 }]}>
       {!!notice && <Text accessibilityRole="alert" style={styles.muted}>{notice}</Text>}
-      {loading ? <LoadingIndicator accessibilityLabel="Cargando agenda" /> : error ? <Card><Text accessibilityRole="alert" style={styles.error}>{error}</Text><Button title="Reintentar" secondary onPress={() => setRetry(value => value + 1)} /></Card> : data && (data.barberId ? <View key={`${data.date}:${data.barberId}`} onLayout={event => agendaScroll.onOrigin(event.nativeEvent.layout.y)}><AgendaTimeline timezone={timezone} data={data} onAppointment={setAppointment} onGridLayout={agendaScroll.onGrid} /></View> : <EmptyState title="Sin profesionales activos" />)}
+      {loading ? <LoadingIndicator accessibilityLabel="Cargando agenda" /> : error ? <Card><Text accessibilityRole="alert" style={styles.error}>{error}</Text><Button title="Reintentar" secondary onPress={() => setRetry(value => value + 1)} /></Card> : data && (data.barberId ? <View key={`${data.date}:${data.barberId}`} onLayout={event => agendaScroll.onOrigin(event.nativeEvent.layout.y)}><AgendaTimeline timezone={timezone} data={data} onAppointment={setAppointment} onBlock={setBlock} onGridLayout={agendaScroll.onGrid} /></View> : <EmptyState title="Sin profesionales activos" />)}
     </ScrollView>
     {appointment && <AppointmentSheet key={appointment.id} appointment={appointment} timezone={timezone} onClose={() => setAppointment(null)} onChanged={statusChanged} onRefresh={() => setRetry(value => value + 1)} onPaid={checkoutDone} />}
+    {block && <BlockSheet block={block} timezone={timezone} onClose={() => setBlock(null)} onDeleted={id => { setData(current => current ? { ...current, blocks: current.blocks.filter(item => item.id !== id) } : current); setBlock(null); setNotice("Bloqueo eliminado."); setRetry(value => value + 1); }} />}
     {createMode && selected && <AgendaCreate mode={createMode} barberId={selected.id} barberName={selected.name} initialDate={date} onClose={() => setCreateMode(null)} onCreated={createdDate => { setNotice(createMode === "appointment" ? "Cita creada." : "Bloqueo guardado."); setBarberId(selected.id); setDate(createdDate); setCreateMode(null); setRetry(value => value + 1); }} />}
     {createMenu && <ActionSurface onClose={() => setCreateMenu(false)}>
       <View>{([{ mode: "appointment", title: "Nueva cita" }, { mode: "block", title: "Bloquear horario" }, { mode: "day", title: "Bloquear día" }] as const).map(item => <SelectionOption key={item.mode} title={item.title} onPress={() => { setCreateMenu(false); setCreateMode(item.mode); setNotice(""); }} />)}</View>

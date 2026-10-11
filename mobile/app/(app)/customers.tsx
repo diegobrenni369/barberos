@@ -39,7 +39,7 @@ export default function Customers() {
       data={customers} keyExtractor={item => item.id} keyboardShouldPersistTaps="handled"
       contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, width: "100%", maxWidth: 520, alignSelf: "center" }}
       ItemSeparatorComponent={Separator}
-      ListEmptyComponent={<Text style={[styles.muted, { paddingVertical: 20 }]}>No se encontraron clientes.</Text>}
+      ListEmptyComponent={<Text style={styles.emptyMessage}>No se encontraron clientes.</Text>}
       ListFooterComponent={customers.length === 20 ? <Text style={[styles.muted, { paddingTop: 16 }]}>Mostrando hasta 20 clientes. Usa la búsqueda para encontrar otro.</Text> : null}
       renderItem={({ item }) => <Pressable accessibilityRole="button" accessibilityLabel={`Ver cliente ${item.name}`} onPress={() => setSelected(item.id)} style={({ pressed }) => ({ paddingVertical: 10, paddingHorizontal: 4, flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: pressed ? colors.soft : colors.background })}>
         <View style={{ flex: 1, gap: 2 }}><Text style={[styles.label, { fontSize: 15, fontWeight: "600" }]}>{item.name}</Text><Text style={[styles.muted, { fontSize: 13, lineHeight: 18 }]}>{item.phone ?? "Sin teléfono"}</Text><Text style={[styles.muted, { fontSize: 11, lineHeight: 16 }]}>{item.nextAt ? `Próxima: ${new Intl.DateTimeFormat("es-CL", { timeZone: timezone, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(item.nextAt))}` : "Sin próxima cita"}</Text></View><View style={{ opacity: 0.5, alignItems: "center", justifyContent: "center", width: 24 }}><Chevron direction="right" size={16} /></View>

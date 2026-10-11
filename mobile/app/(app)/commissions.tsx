@@ -121,7 +121,7 @@ export default function Commissions() {
           <Text style={styles.subtitle}>Detalle</Text>
         </>}
       </View>}
-      ListEmptyComponent={report ? <Text style={styles.muted}>No hay comisiones en este período.</Text> : null}
+      ListEmptyComponent={report ? <Text style={styles.emptyMessage}>No hay comisiones en este período.</Text> : null}
       ItemSeparatorComponent={Separator}
       renderItem={({ item }) => <View style={{ gap: 4, paddingVertical: 14 }}>
         <Text style={[styles.muted, { fontSize: 12 }]}>{new Intl.DateTimeFormat("es-CL", { timeZone: report?.timezone, day: "numeric", month: "short", year: "numeric" }).format(new Date(item.date))}</Text>

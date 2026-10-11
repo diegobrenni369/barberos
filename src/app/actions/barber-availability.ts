@@ -1,7 +1,7 @@
 "use server";
 
 import { MembershipRole, Prisma } from "@prisma/client";
-import { ensureNoActiveAppointment } from "@/lib/barber-blocks";
+import { ensureNoActiveAppointment, removeBarberBlock } from "@/lib/barber-blocks";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -9,6 +9,7 @@ import { zonedDateTimeToUtc } from "@/lib/agenda";
 import { timeToMinute } from "@/lib/barber-availability";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { mobileMembership } from "@/lib/mobile-auth";
 import { createBarberBlockSchema, updateBarberBlockSchema, weeklyAvailabilitySchema } from "@/lib/validations";
 
 function agendaFail(date: string, message: string): never { redirect(`/agenda?date=${date}&error=${encodeURIComponent(message)}`); }
@@ -105,9 +106,12 @@ export async function updateBarberBlock(formData: FormData) {
 }
 
 export async function deleteBarberBlock(formData: FormData) {
-  const membership = await requireRole(MembershipRole.OWNER);
+  const membership = await requireRole(MembershipRole.OWNER, MembershipRole.BARBER);
   const id = String(formData.get("id")); const date = String(formData.get("date"));
-  const result = await prisma.barberBlock.deleteMany({ where: { id, barbershopId: membership.barbershopId } });
+  // Reuse M7's active, unambiguous user/barber association for staff.
+  const identity = membership.role === MembershipRole.BARBER ? await mobileMembership(membership.userId) : null;
+  if (membership.role === MembershipRole.BARBER && (!identity?.barberId || identity.barbershopId !== membership.barbershopId)) agendaFail(date, "Bloqueo no disponible");
+  const result = await removeBarberBlock(prisma, { barbershopId: membership.barbershopId, ...(identity?.barberId ? { barberId: identity.barberId } : {}) }, id);
   if (!result.count) agendaFail(date, "Bloqueo no encontrado");
   revalidatePath("/agenda"); redirect(`/agenda?date=${date}`);
 }

@@ -1,4 +1,5 @@
 export type Interval = { startMinute: number; endMinute: number };
+export type MobileBlock = Interval & { id: string; label: string; note: string | null; startsAt: string; endsAt: string };
 export type MobileAppointment = Interval & { id: string; customerName: string; serviceName: string; status: "SCHEDULED" | "CONFIRMED" | "COMPLETED" | "NO_SHOW" | "CANCELLED"; phone: string | null; notes: string | null; price: string; currency: string; barberName: string; startsAt: string; endsAt: string; canChangeStatus: boolean; canCharge: boolean; paymentLabel: string | null; payment?: { methods: string; amount: string; currency: string } | null };
 export type AgendaData = {
   date: string; today: string; barberId: string | null;
@@ -7,7 +8,7 @@ export type AgendaData = {
   availability: Interval[];
   appointments: MobileAppointment[];
   breaks: (Interval & { id: string; label: string | null })[];
-  blocks: (Interval & { id: string; label: string })[];
+  blocks: MobileBlock[];
 };
 export function moveDate(date: string, offset: number) {
   const value = new Date(`${date}T12:00:00Z`);

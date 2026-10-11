@@ -27,6 +27,7 @@ export const styles = StyleSheet.create({
   title: { fontSize: 28, fontWeight: "600", color: colors.text },
   subtitle: { fontSize: 18, fontWeight: "600", color: colors.text },
   muted: { fontSize: 14, lineHeight: 21, color: colors.muted },
+  emptyMessage: { fontSize: 13, lineHeight: 20, color: colors.muted, paddingVertical: 8 },
   label: { fontSize: 14, fontWeight: "500", color: colors.text },
   error: { fontSize: 14, lineHeight: 20, color: colors.error },
   input: { minHeight: 48, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 16, color: colors.text, backgroundColor: colors.background },
