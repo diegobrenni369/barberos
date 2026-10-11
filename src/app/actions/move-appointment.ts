@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { moveAppointmentInTransaction } from "@/lib/move-appointment";
+import { scheduleMobilePush } from "@/lib/mobile-push";
 import { logFailure } from "@/lib/safe-logging";
 
 const schema = z.object({
@@ -35,7 +36,8 @@ export async function moveAppointment(input: unknown) {
   const parsed = schema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Los datos del movimiento no son válidos." };
   try {
-    await prisma.$transaction(tx => moveAppointmentInTransaction(tx, { barbershopId: membership.barbershopId, timezone: membership.barbershop.timezone }, parsed.data), { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    const push = await prisma.$transaction(tx => moveAppointmentInTransaction(tx, { barbershopId: membership.barbershopId, timezone: membership.barbershop.timezone }, parsed.data), { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    scheduleMobilePush(prisma, push);
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") return { ok: false, error: "La agenda cambió. Intenta nuevamente." };
     if (error instanceof Error && messages[error.message]) return { ok: false, error: messages[error.message] };

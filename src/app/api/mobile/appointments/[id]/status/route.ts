@@ -1,3 +1,4 @@
+import { appointmentPush, scheduleMobilePush } from "@/lib/mobile-push";
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -48,13 +49,14 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         await ensureNoBarberBlock(tx, args);
         await ensureNoOverlap(tx, barbershopId, current.barberId, current.startsAt, current.endsAt, id);
       }
-      await tx.appointment.update({ where: { id, barbershopId }, data: { status } });
+      const updated = await tx.appointment.update({ where: { id, barbershopId }, data: { status } });
       await syncAppointmentReminders(tx, barbershopId, id, current);
-      return { id, status };
+      return { id, status, push: appointmentPush(updated, current) };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     if ("error" in result) return mobileResponse({ error: result.error }, result.code);
     revalidatePath("/agenda"); revalidatePath("/dashboard");
-    return mobileResponse(result);
+    scheduleMobilePush(prisma, result.push);
+    return mobileResponse({ id: result.id, status: result.status });
   } catch (error) {
     const conflicts = ["BARBERSHOP_CLOSED", "OUTSIDE_BUSINESS_HOURS", "OUTSIDE_AVAILABILITY", "BARBER_BREAK", "BARBER_BLOCKED", "APPOINTMENT_OVERLAP"];
     if (error instanceof Error && (conflicts.includes(error.message) || (error as { code?: string }).code === "P2034")) return mobileResponse({ error: "La reserva cambió o el horario no está disponible. Actualiza la agenda." }, 409);

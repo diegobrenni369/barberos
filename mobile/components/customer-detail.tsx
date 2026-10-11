@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Modal, ScrollView, Text, View } from "react-native";
+import { Modal, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../lib/auth";
 import { ApiError } from "../lib/api";
 import { appointmentAppearance } from "./agenda-timeline";
-import { Badge, Button, Card, Separator, styles } from "./ui";
+import { LoadingIndicator, Badge, Button, Card, Separator, styles } from "./ui";
 import { ContactActions } from "./contact-actions";
 
 type Appointment = { id: string; startsAt: string; service: string; barber: string; status: keyof typeof appointmentAppearance };
@@ -42,7 +42,7 @@ export function CustomerDetail({ id, onClose }: { id: string; onClose: () => voi
     <SafeAreaView style={styles.screen}>
       <SheetHeader title="Cliente" onClose={onClose} />
       <ScrollView contentContainerStyle={[styles.content, { padding: 16, gap: 18 }]}>
-        {loading ? <ActivityIndicator accessibilityLabel="Cargando cliente" /> : error ? <><Text accessibilityRole="alert" style={styles.error}>{error}</Text><Button title="Reintentar" secondary onPress={() => setRetry(value => value + 1)} /></> : profile && <>
+        {loading ? <LoadingIndicator accessibilityLabel="Cargando cliente" /> : error ? <><Text accessibilityRole="alert" style={styles.error}>{error}</Text><Button title="Reintentar" secondary onPress={() => setRetry(value => value + 1)} /></> : profile && <>
           <View style={{ gap: 6 }}><Text style={styles.title}>{profile.customer.name}</Text><Text style={styles.muted}>{profile.customer.phone ?? "Sin teléfono"}</Text>{!!profile.customer.email && <Text style={styles.muted}>{profile.customer.email}</Text>}</View>
           <ContactActions phone={profile.customer.phone} />
           <Card><Text style={styles.subtitle}>Próxima cita</Text>{profile.next ? appointment(profile.next) : <Text style={styles.muted}>Sin próximas citas.</Text>}</Card>

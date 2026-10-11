@@ -1,3 +1,4 @@
+import { appointmentPush, scheduleMobilePush } from "./mobile-push";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { matchOrCreateCustomer } from "@/lib/customer-matching";
 import { syncAppointmentReminders } from "@/lib/appointment-reminders";
@@ -84,7 +85,7 @@ export async function confirmPublicBooking(db: PrismaClient, raw: unknown, now =
   if (Number(input.time.slice(3)) % PUBLIC_SLOT_MINUTES !== 0) throw new PublicBookingError("Selecciona uno de los horarios disponibles.");
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      return await db.$transaction(async tx => {
+      const result = await db.$transaction(async tx => {
         const day = await loadBookingDay(tx, input, now);
         const selected = await availableBarber(tx, day, input.date, input.time, now);
         if (!selected) throw new PublicBookingError(SLOT_TAKEN);
@@ -94,8 +95,12 @@ export async function confirmPublicBooking(db: PrismaClient, raw: unknown, now =
           startsAt: selected.startsAt, endsAt: selected.endsAt, price: day.service.price, status: "SCHEDULED", customerConfirmedAt: null, source: "ONLINE",
         } });
         await syncAppointmentReminders(tx, day.shop.id, appointment.id, undefined, now);
-        return { shop: day.shop.name, service: day.service.name, barber: selected.barber.name, date: input.date, time: input.time };
+        return { push: appointmentPush(appointment), shop: day.shop.name, service: day.service.name, barber: selected.barber.name, date: input.date, time: input.time };
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+      scheduleMobilePush(db, result.push);
+      const { push: _push, ...confirmation } = result;
+      void _push;
+      return confirmation;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") {
         if (attempt < 2) continue;

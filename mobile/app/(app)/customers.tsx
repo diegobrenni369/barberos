@@ -1,9 +1,9 @@
 import { useCallback, useState } from "react";
 import { useFocusEffect } from "expo-router";
-import { ActivityIndicator, FlatList, Pressable, Text, View } from "react-native";
+import { FlatList, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../lib/auth";
-import { Button, Input, Separator, colors, styles } from "../../components/ui";
+import { LoadingIndicator, Button, Input, Separator, colors, styles } from "../../components/ui";
 import { SearchIcon } from "../../components/creation-controls";
 import { Chevron } from "../../components/chevron";
 import { CustomerDetail } from "../../components/customer-detail";
@@ -35,7 +35,7 @@ export default function Customers() {
       <Text style={styles.title}>Clientes</Text>
       <View><Input label="Buscar cliente" placeholder="Nombre o teléfono" value={query} onChangeText={setQuery} maxLength={100} returnKeyType="search" onSubmitEditing={() => setRetry(value => value + 1)} style={{ paddingRight: 48 }} /><Pressable accessibilityRole="button" accessibilityLabel="Buscar cliente" onPress={() => setRetry(value => value + 1)} style={{ position: "absolute", bottom: 2, right: 2, width: 44, height: 44, alignItems: "center", justifyContent: "center" }}><SearchIcon /></Pressable></View>
     </View>
-    {loading ? <ActivityIndicator accessibilityLabel="Cargando clientes" style={{ padding: 24 }} /> : error ? <View style={styles.content}><Text accessibilityRole="alert" style={styles.error}>{error}</Text><Button title="Reintentar" secondary onPress={() => setRetry(value => value + 1)} /></View> : <FlatList
+    {loading ? <LoadingIndicator accessibilityLabel="Cargando clientes" /> : error ? <View style={styles.content}><Text accessibilityRole="alert" style={styles.error}>{error}</Text><Button title="Reintentar" secondary onPress={() => setRetry(value => value + 1)} /></View> : <FlatList
       data={customers} keyExtractor={item => item.id} keyboardShouldPersistTaps="handled"
       contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, width: "100%", maxWidth: 520, alignSelf: "center" }}
       ItemSeparatorComponent={Separator}

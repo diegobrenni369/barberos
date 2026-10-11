@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, View } from "react-native";
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../lib/auth";
 import { ApiError } from "../lib/api";
 import { timeLabel } from "../lib/agenda";
-import { Button, Card, Input, colors, styles } from "./ui";
+import { LoadingIndicator, Button, Card, Input, colors, styles } from "./ui";
 import { CompactSelect, DateControl, SearchIcon, SelectRow, PickerSurface, SelectionOption, readableDate } from "./creation-controls";
 
 export type CreateMode = "appointment" | "block" | "day";
@@ -85,7 +85,7 @@ function BookingForm({ barberId, initialDate, onCreated, setPending }: Props & {
             <View><Input label="Buscar cliente" placeholder="Nombre o teléfono" value={query} onChangeText={setQuery} maxLength={100} returnKeyType="search" onSubmitEditing={() => { setSearch(query.trim()); setReload(value => value + 1); }} style={{ paddingRight: 48 }} /><Pressable accessibilityRole="button" accessibilityLabel="Buscar cliente" onPress={() => { setSearch(query.trim()); setReload(value => value + 1); }} style={{ position: "absolute", right: 2, bottom: 2, width: 44, height: 44, alignItems: "center", justifyContent: "center" }}><SearchIcon /></Pressable></View>
           </View>
           <ScrollView keyboardShouldPersistTaps="handled" style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}>
-            {loading && <ActivityIndicator accessibilityLabel="Buscando clientes" />}
+            {loading && <LoadingIndicator accessibilityLabel="Buscando clientes" />}
             {!loading && !error && customers.map(item => <SelectionOption key={item.id} title={item.name} detail={item.phone ?? "Sin teléfono"} selected={customer?.id === item.id} onPress={() => { setCustomer(item); setIsNew(false); setCustomerPicker(false); }} />)}
             {!loading && !error && !customers.length && <Text style={styles.muted}>No se encontraron clientes.</Text>}
             {!!error && <View style={{ gap: 8 }}><Text accessibilityRole="alert" style={styles.error}>{error}</Text><Button title="Reintentar" secondary onPress={() => setReload(value => value + 1)} /></View>}
@@ -104,7 +104,7 @@ function BookingForm({ barberId, initialDate, onCreated, setPending }: Props & {
       <Button title="Revisar cita" disabled={!time || !slots.includes(time) || !validDate(date) || loading || !!error} onPress={() => setStep(3)} />
     </>}
     {step === 3 && service && <><Card><Text style={styles.subtitle}>{isNew ? name : customer?.name}</Text><Text style={styles.label}>{service.name}</Text><Text style={styles.muted}>{readableDate(date)} · {time} · {service.durationMinutes} min</Text><Text style={styles.subtitle}>{money(service)}</Text></Card><Button title="Crear cita" loading={busy} onPress={() => void submit()} /></>}
-    {loading && <ActivityIndicator accessibilityLabel="Cargando" />}
+    {loading && <LoadingIndicator accessibilityLabel="Cargando" />}
     {!!error && <><Text accessibilityRole="alert" style={styles.error}>{error}</Text>{step < 3 && <Button title="Reintentar" secondary onPress={() => setReload(value => value + 1)} />}</>}
     {step > 0 && <Button title="Atrás" variant="ghost" disabled={busy} onPress={() => { setError(""); setStep(value => value - 1); }} />}
   </View>;
@@ -155,7 +155,7 @@ function BlockForm({ mode, barberId, initialDate, onCreated, setPending }: Props
       </PickerSurface>}
     </>}
     {allDay && data && <Text style={styles.muted}>{data.intervals.length ? `Jornada: ${timeLabel(Math.min(...data.intervals.map(row => row.startMinute)))}–${timeLabel(Math.max(...data.intervals.map(row => row.endMinute)))}` : "El profesional no trabaja ese día. No es necesario bloquearlo."}</Text>}
-    {loading && <ActivityIndicator />}
+    {loading && <LoadingIndicator />}
     <CompactSelect label="Motivo" value={reasonId} disabled={loading} options={data?.reasons.map(reason => ({ id: reason.id, title: reason.name })) ?? []} onChange={setReasonId} />
     {data && !data.reasons.length && <Text style={styles.muted}>No hay motivos activos. Configúralos desde la web.</Text>}
     <Input label="Nota (opcional)" value={note} onChangeText={setNote} maxLength={500} multiline />

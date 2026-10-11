@@ -1,14 +1,15 @@
 import { ActionSurface, PickerSurface, SelectionOption } from "../../components/creation-controls";
 import { useAgendaScroll } from "../../lib/use-agenda-scroll";
 import { AgendaWeek } from "../../components/agenda-week";
-import { useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { useLocalSearchParams } from "expo-router";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../lib/auth";
 import { useSelectedBarber } from "../../lib/selected-barber";
 import { ApiError } from "../../lib/api";
 import { type AgendaData, type MobileAppointment, todayIn } from "../../lib/agenda";
-import { Button, Card, EmptyState, colors, styles } from "../../components/ui";
+import { LoadingIndicator, Button, Card, EmptyState, colors, styles } from "../../components/ui";
 import { Chevron } from "../../components/chevron";
 import { AgendaTimeline } from "../../components/agenda-timeline";
 import { AppointmentSheet } from "../../components/appointment-sheet";
@@ -29,6 +30,17 @@ export default function Agenda() {
   const [createMode, setCreateMode] = useState<CreateMode | null>(null);
   const [notice, setNotice] = useState("");
   const agendaScroll = useAgendaScroll(date, timezone, data?.barberId ?? barberId, !loading && !error && data?.date === date);
+  const { pushDate, pushKey } = useLocalSearchParams<{ pushDate?: string; pushKey?: string }>();
+  const handledPush = useRef<string | null>(null);
+  const requestScroll = agendaScroll.requestScroll;
+  useEffect(() => {
+    if (!pushKey || handledPush.current === pushKey || typeof pushDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(pushDate)) return;
+    const value = new Date(`${pushDate}T12:00:00Z`);
+    if (Number.isNaN(+value) || value.toISOString().slice(0, 10) !== pushDate) return;
+    handledPush.current = pushKey;
+    setAppointment(null); setDate(pushDate); setRetry(value => value + 1);
+    requestScroll("restore");
+  }, [pushDate, pushKey, requestScroll]);
   function checkoutDone(id: string) {
     const update = (item: MobileAppointment): MobileAppointment => item.id === id ? { ...item, status: "COMPLETED", canCharge: false, canChangeStatus: false, paymentLabel: "Pagada" } : item;
     setData(current => current ? { ...current, appointments: current.appointments.map(update) } : current);
@@ -68,7 +80,7 @@ export default function Agenda() {
     </View>
     <ScrollView ref={agendaScroll.ref} onLayout={event => agendaScroll.setViewport(event.nativeEvent.layout.height)} onContentSizeChange={(_, height) => agendaScroll.setHeight(height)} onScroll={event => agendaScroll.onScroll(event.nativeEvent.contentOffset.y)} scrollEventThrottle={16} onScrollBeginDrag={agendaScroll.onDrag} style={{ flex: 1 }} contentContainerStyle={[styles.content, { paddingTop: 8, paddingHorizontal: 8, paddingBottom: 12 }]}>
       {!!notice && <Text accessibilityRole="alert" style={styles.muted}>{notice}</Text>}
-      {loading ? <View accessibilityLabel="Cargando agenda" style={{ padding: 32 }}><ActivityIndicator /><Text style={styles.muted}>Cargando agenda…</Text></View> : error ? <Card><Text accessibilityRole="alert" style={styles.error}>{error}</Text><Button title="Reintentar" secondary onPress={() => setRetry(value => value + 1)} /></Card> : data && (data.barberId ? <View key={`${data.date}:${data.barberId}`} onLayout={event => agendaScroll.onOrigin(event.nativeEvent.layout.y)}><AgendaTimeline timezone={timezone} data={data} onAppointment={setAppointment} onGridLayout={agendaScroll.onGrid} /></View> : <EmptyState title="Sin profesionales activos" />)}
+      {loading ? <LoadingIndicator accessibilityLabel="Cargando agenda" /> : error ? <Card><Text accessibilityRole="alert" style={styles.error}>{error}</Text><Button title="Reintentar" secondary onPress={() => setRetry(value => value + 1)} /></Card> : data && (data.barberId ? <View key={`${data.date}:${data.barberId}`} onLayout={event => agendaScroll.onOrigin(event.nativeEvent.layout.y)}><AgendaTimeline timezone={timezone} data={data} onAppointment={setAppointment} onGridLayout={agendaScroll.onGrid} /></View> : <EmptyState title="Sin profesionales activos" />)}
     </ScrollView>
     {appointment && <AppointmentSheet key={appointment.id} appointment={appointment} timezone={timezone} onClose={() => setAppointment(null)} onChanged={statusChanged} onRefresh={() => setRetry(value => value + 1)} onPaid={checkoutDone} />}
     {createMode && selected && <AgendaCreate mode={createMode} barberId={selected.id} barberName={selected.name} initialDate={date} onClose={() => setCreateMode(null)} onCreated={createdDate => { setNotice(createMode === "appointment" ? "Cita creada." : "Bloqueo guardado."); setBarberId(selected.id); setDate(createdDate); setCreateMode(null); setRetry(value => value + 1); }} />}
