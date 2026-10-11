@@ -73,7 +73,7 @@ export default function Commissions() {
   function confirmSettlement() {
     if (!owner || !report?.settlement?.count || settling.current) return;
     const snapshot = report;
-    Alert.alert("¿Marcar como pagadas?", `${snapshot.barber.name}\n${readableDate(snapshot.from)} – ${readableDate(snapshot.to)}\n${snapshot.settlement!.count} comisiones pendientes\nTotal a liquidar: ${money(snapshot.settlement!.total, snapshot.currency)}\n\nEsto registra la liquidación en BarberOS. No realiza una transferencia de dinero.`, [
+    Alert.alert("¿Marcar como pagadas?", `${snapshot.barber.name}\n${readableDate(snapshot.from)} – ${readableDate(snapshot.to)}\n${snapshot.settlement!.count} comisiones pendientes\nTotal a liquidar: ${money(snapshot.settlement!.total, snapshot.currency)}\n\nEsto registra la liquidación en Tevno. No realiza una transferencia de dinero.`, [
       { text: "Cancelar", style: "cancel" },
       { text: "Confirmar pago", onPress: () => void settle(snapshot) },
     ]);
