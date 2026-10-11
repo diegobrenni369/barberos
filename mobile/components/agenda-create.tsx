@@ -87,7 +87,7 @@ function BookingForm({ barberId, initialDate, onCreated, setPending }: Props & {
           <ScrollView keyboardShouldPersistTaps="handled" style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}>
             {loading && <LoadingIndicator accessibilityLabel="Buscando clientes" />}
             {!loading && !error && customers.map(item => <SelectionOption key={item.id} title={item.name} detail={item.phone ?? "Sin teléfono"} selected={customer?.id === item.id} onPress={() => { setCustomer(item); setIsNew(false); setCustomerPicker(false); }} />)}
-            {!loading && !error && !customers.length && <Text style={styles.muted}>No se encontraron clientes.</Text>}
+            {!loading && !error && !customers.length && <Text style={styles.emptyMessage}>No se encontraron clientes.</Text>}
             {!!error && <View style={{ gap: 8 }}><Text accessibilityRole="alert" style={styles.error}>{error}</Text><Button title="Reintentar" secondary onPress={() => setReload(value => value + 1)} /></View>}
           </ScrollView>
           <View style={{ padding: 16, borderTopWidth: 1, borderColor: colors.border }}><Button title="Crear cliente nuevo" secondary onPress={() => { setIsNew(true); setCustomer(null); setCustomerPicker(false); }} /></View>
@@ -99,7 +99,7 @@ function BookingForm({ barberId, initialDate, onCreated, setPending }: Props & {
     {step === 1 && <><CompactSelect label="Servicio" value={service?.id ?? ""} disabled={loading} options={services.map(item => ({ id: item.id, title: item.name, detail: `${item.durationMinutes} min · ${money(item)}` }))} onChange={id => { setService(services.find(item => item.id === id) ?? null); setTime(""); }} />{!loading && !services.length && <Text style={styles.muted}>Este profesional no tiene servicios activos asignados.</Text>}<Button title="Continuar" disabled={!service || loading || !!error} onPress={() => setStep(2)} /></>}
     {step === 2 && <>
       <DateControl date={date} onChange={value => { setDate(value); setTime(""); setSlots([]); }} />
-      {!loading && validDate(date) && !slots.length && <Text style={styles.muted}>No hay horarios disponibles para este día.</Text>}
+      {!loading && validDate(date) && !slots.length && <Text style={styles.emptyMessage}>No hay horarios disponibles para este día.</Text>}
       {!loading && validDate(date) && <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>{slots.map(slot => <Choice key={slot} title={slot} selected={slot === time} onPress={() => setTime(slot)} />)}</View>}
       <Button title="Revisar cita" disabled={!time || !slots.includes(time) || !validDate(date) || loading || !!error} onPress={() => setStep(3)} />
     </>}
@@ -147,7 +147,7 @@ function BlockForm({ mode, barberId, initialDate, onCreated, setPending }: Props
         <View style={{ flex: 1 }}><SelectRow label="Inicio" value={startSlots.includes(startTime) ? startTime : "Seleccionar"} disabled={loading || !startSlots.length} onPress={() => setTimePicker("start")} /></View>
         <View style={{ flex: 1 }}><SelectRow label="Fin" value={endSlots.includes(endTime) ? endTime : "Seleccionar"} disabled={loading || !endSlots.length} onPress={() => setTimePicker("end")} /></View>
       </View>
-      {!loading && data && !startSlots.length && <Text style={styles.muted}>No hay horarios disponibles para bloquear este día.</Text>}
+      {!loading && data && !startSlots.length && <Text style={styles.emptyMessage}>No hay horarios disponibles para bloquear este día.</Text>}
       {timePicker && <PickerSurface title={timePicker === "start" ? "Inicio" : "Fin"} onClose={() => setTimePicker(null)}>
         <ScrollView contentContainerStyle={{ padding: 16 }}>
           {(timePicker === "start" ? startSlots : endSlots).map(slot => <SelectionOption key={slot} title={slot} selected={slot === (timePicker === "start" ? startTime : endTime)} onPress={() => { if (timePicker === "start") setStartTime(slot); else setEndTime(slot); setTimePicker(null); }} />)}
@@ -157,7 +157,7 @@ function BlockForm({ mode, barberId, initialDate, onCreated, setPending }: Props
     {allDay && data && <Text style={styles.muted}>{data.intervals.length ? `Jornada: ${timeLabel(Math.min(...data.intervals.map(row => row.startMinute)))}–${timeLabel(Math.max(...data.intervals.map(row => row.endMinute)))}` : "El profesional no trabaja ese día. No es necesario bloquearlo."}</Text>}
     {loading && <LoadingIndicator />}
     <CompactSelect label="Motivo" value={reasonId} disabled={loading} options={data?.reasons.map(reason => ({ id: reason.id, title: reason.name })) ?? []} onChange={setReasonId} />
-    {data && !data.reasons.length && <Text style={styles.muted}>No hay motivos activos. Configúralos desde la web.</Text>}
+    {data && !data.reasons.length && <Text style={styles.emptyMessage}>No hay motivos activos. Configúralos desde la web.</Text>}
     <Input label="Nota (opcional)" value={note} onChangeText={setNote} maxLength={500} multiline />
     {!!error && <><Text accessibilityRole="alert" style={styles.error}>{error}</Text><Button title="Actualizar datos" secondary disabled={busy} onPress={() => setReload(value => value + 1)} /></>}
     <Button title={allDay ? "Bloquear día" : "Guardar bloqueo"} loading={busy} disabled={loading || !validDate(date) || !data?.reasons.some(reason => reason.id === reasonId) || (allDay ? !data?.intervals.length : !hoursValid || !selectedHoursAvailable)} onPress={() => void submit()} />

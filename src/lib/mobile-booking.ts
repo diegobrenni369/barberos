@@ -9,6 +9,7 @@ import { PUBLIC_SLOT_MINUTES, publicBookingInput } from "@/lib/public-booking-in
 import { matchOrCreateCustomer } from "@/lib/customer-matching";
 import { syncAppointmentReminders } from "@/lib/appointment-reminders";
 import { ensureNoActiveAppointment } from "@/lib/barber-blocks";
+import { createBarberBlockSchema } from "@/lib/validations";
 
 export class MobileBookingError extends Error {
   constructor(message: string, public status = 409) { super(message); }
@@ -18,7 +19,7 @@ export const dayInput = barberInput.extend({ date: z.iso.date() }).strict();
 export const slotInput = dayInput.extend({ serviceId: z.string().cuid() }).strict();
 const contactInput = publicBookingInput.pick({ name: true, phone: true, email: true });
 export const bookingInput = slotInput.extend({ time: publicBookingInput.shape.time, customerId: z.string().cuid().optional(), customer: contactInput.optional() }).strict().refine(value => Boolean(value.customerId) !== Boolean(value.customer), "Selecciona un cliente o ingresa sus datos.");
-export const blockInput = dayInput.extend({ allDay: z.boolean(), startTime: publicBookingInput.shape.time.optional(), endTime: publicBookingInput.shape.time.optional(), reasonId: z.string().cuid(), note: z.string().trim().max(500).optional() }).strict().refine(value => value.allDay || (value.startTime && value.endTime && value.startTime < value.endTime), "Revisa la hora de inicio y fin.");
+export const blockInput = dayInput.extend({ allDay: z.boolean(), startTime: publicBookingInput.shape.time.optional(), endTime: publicBookingInput.shape.time.optional(), reasonId: createBarberBlockSchema.shape.reasonId, note: z.string().trim().max(500).optional() }).strict().refine(value => value.allDay || (value.startTime && value.endTime && value.startTime < value.endTime), "Revisa la hora de inicio y fin.");
 
 export async function loadMobileDay(tx: Prisma.TransactionClient, barbershopId: string, input: z.infer<typeof dayInput>) {
   const shop = await tx.barbershop.findFirst({ where: { id: barbershopId, isActive: true }, select: { id: true, name: true, timezone: true } });

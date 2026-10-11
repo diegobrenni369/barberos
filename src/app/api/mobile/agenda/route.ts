@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     const [appointments, breaks, blocks, availability] = barberId ? await Promise.all([
       prisma.appointment.findMany({ where: { ...scope, startsAt: { lt: range.end }, endsAt: { gt: range.start }, status: { not: "CANCELLED" } }, select: { id: true, startsAt: true, endsAt: true, status: true, notes: true, price: true, barbershop: { select: { currency: true } }, barber: { select: { name: true } }, sale: { select: { total: true, currency: true, status: true, payments: { select: { amount: true, method: true } } } }, customer: { select: { name: true, phone: true } }, service: { select: { name: true } } }, orderBy: { startsAt: "asc" } }),
       prisma.barberBreak.findMany({ where: { ...scope, dayOfWeek }, select: { id: true, startMinute: true, endMinute: true, label: true }, orderBy: { startMinute: "asc" } }),
-      prisma.barberBlock.findMany({ where: { ...scope, startsAt: { lt: range.end }, endsAt: { gt: range.start } }, select: { id: true, startsAt: true, endsAt: true, reason: { select: { name: true } } }, orderBy: { startsAt: "asc" } }),
+      prisma.barberBlock.findMany({ where: { ...scope, startsAt: { lt: range.end }, endsAt: { gt: range.start } }, select: { id: true, startsAt: true, endsAt: true, note: true, reason: { select: { name: true } } }, orderBy: { startsAt: "asc" } }),
       prisma.barberAvailability.findMany({ where: scope, select: { dayOfWeek: true, startMinute: true, endMinute: true } }),
     ]) : [[], [], [], []];
     const minute = (value: Date) => {
@@ -39,7 +39,7 @@ export async function GET(request: Request) {
     return mobileResponse({ date, today, barbershop: { id: barbershopId, name: barbershop.name, timezone: barbershop.timezone }, barbers, barberId, businessHour,
       availability: effectiveAvailability(availability.length > 0, availability.filter(row => row.dayOfWeek === dayOfWeek), businessHour),
       appointments: appointments.map(item => ({ id: item.id, startMinute: minute(item.startsAt), endMinute: minute(item.endsAt), customerName: item.customer.name, serviceName: item.service.name, status: item.status, phone: item.customer.phone, notes: item.notes, price: item.price.toString(), currency: item.barbershop.currency, barberName: item.barber.name, startsAt: item.startsAt.toISOString(), endsAt: item.endsAt.toISOString(), canChangeStatus: !item.sale && ["SCHEDULED", "CONFIRMED"].includes(item.status), canCharge: !item.sale && item.barbershop.currency === "CLP" && ["SCHEDULED", "CONFIRMED", "COMPLETED"].includes(item.status), paymentLabel: item.sale ? getSalePaymentLabel(item.sale) : null, payment: item.sale ? { methods: [...new Set(item.sale.payments.map(payment => paymentMethods[payment.method]))].join(" · "), amount: getPaidAmount(item.sale).toString(), currency: item.sale.currency } : null })),
-      breaks, blocks: blocks.map(item => ({ id: item.id, startMinute: minute(item.startsAt), endMinute: minute(item.endsAt), label: item.reason.name })),
+      breaks, blocks: blocks.map(item => ({ id: item.id, startMinute: minute(item.startsAt), endMinute: minute(item.endsAt), label: item.reason.name, note: item.note, startsAt: item.startsAt.toISOString(), endsAt: item.endsAt.toISOString() })),
     });
   } catch {
     return mobileResponse({ error: "No se pudo cargar la agenda." }, 503);
