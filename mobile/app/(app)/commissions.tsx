@@ -1,13 +1,13 @@
 import { useCallback, useRef, useState } from "react";
 import { useFocusEffect } from "expo-router";
-import { ActivityIndicator, Alert, FlatList, Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, FlatList, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../lib/auth";
 import { useSelectedBarber } from "../../lib/selected-barber";
 import { todayIn } from "../../lib/agenda";
 import { ApiError } from "../../lib/api";
 import { PickerSurface, SelectionOption, DateControl, readableDate } from "../../components/creation-controls";
-import { Badge, Button, Card, Separator, colors, styles } from "../../components/ui";
+import { LoadingIndicator, Badge, Button, Card, Separator, colors, styles } from "../../components/ui";
 import { Chevron } from "../../components/chevron";
 
 type Report = {
@@ -96,7 +96,7 @@ export default function Commissions() {
         <Text style={styles.title}>Mis comisiones</Text>
         <View style={{ gap: 4 }}>
           {owner ? <HeaderSelect label="Profesional" title={barbers.find(item => item.id === barberId)?.name ?? report?.barber.name ?? "Seleccionar profesional"} value={barberId} options={barbers.map(item => ({ id: item.id, title: item.name }))} onChange={setBarberId} disabled={barbersLoading || !barbers.length} /> : <View style={{ minHeight: 44, paddingHorizontal: 0, justifyContent: "center" }}><Text style={styles.label}>{session?.barberName}</Text></View>}
-          {barbersLoading && <ActivityIndicator accessibilityLabel="Cargando profesionales" />}
+          {barbersLoading && <LoadingIndicator accessibilityLabel="Cargando profesionales" />}
           {!!barbersError && <><Text style={styles.error} accessibilityRole="alert">{barbersError}</Text><Button title="Reintentar profesionales" variant="ghost" onPress={() => setBarbersRetry(value => value + 1)} /></>}
           {owner && !barbersLoading && !barbersError && !barbers.length && <Text style={styles.muted}>Sin profesionales activos.</Text>}
           <View style={{ gap: 0, marginTop: 8 }}>
@@ -107,7 +107,7 @@ export default function Commissions() {
         {period === "custom" && <View style={{ gap: 10 }}><View style={{ gap: 4 }}><Text style={styles.label}>Desde</Text><DateControl date={from} onChange={setFrom} /></View><View style={{ gap: 4 }}><Text style={styles.label}>Hasta</Text><DateControl date={to} onChange={setTo} /></View></View>}
         {!barberId && <Text style={styles.muted}>Selecciona un profesional para consultar sus comisiones.</Text>}
         {invalidRange && <Text accessibilityRole="alert" style={styles.error}>La fecha de inicio debe ser anterior o igual al término.</Text>}
-        {loading && <ActivityIndicator accessibilityLabel="Cargando comisiones" />}
+        {loading && <LoadingIndicator accessibilityLabel="Cargando comisiones" />}
         {!!error && <><Text accessibilityRole="alert" style={styles.error}>{error}</Text><Button title="Reintentar" secondary onPress={() => setRetry(value => value + 1)} /></>}
         {!!settlementMessage && <Text accessibilityRole="alert" style={styles.muted}>{settlementMessage}</Text>}
         {!!settlementError && <Text accessibilityRole="alert" style={styles.error}>{settlementError}</Text>}

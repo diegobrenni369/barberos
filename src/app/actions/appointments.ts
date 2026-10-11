@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { appointmentSchema } from "@/lib/validations";
 import { ensureNoOverlap } from "@/lib/appointment-overlap";
 import { ensureBarberService, BARBER_SERVICE_MESSAGE } from "@/lib/barber-service";
+import { appointmentPush, scheduleMobilePush } from "@/lib/mobile-push";
 import { syncAppointmentReminders } from "@/lib/appointment-reminders";
 
 function fail(date: string, message: string): never { redirect(`/agenda?date=${date}&error=${encodeURIComponent(message)}`); }
@@ -74,7 +75,7 @@ export async function updateAppointment(formData: FormData) {
   const id = data.id;
   if (!id) fail(data.date, "Reserva no encontrada");
   try {
-    await prisma.$transaction(async (tx) => {
+    const push = await prisma.$transaction(async (tx) => {
       const current = await tx.appointment.findFirst({ where: { id, barbershopId: membership.barbershopId }, include: { sale: { select: { id: true } } } });
       if (!current) throw new Error("APPOINTMENT_NOT_FOUND");
       if (current.sale) throw new Error("APPOINTMENT_PAID");
@@ -89,7 +90,9 @@ export async function updateAppointment(formData: FormData) {
       }
       await tx.appointment.updateMany({ where: { id, barbershopId: membership.barbershopId }, data: { barberId: data.barberId, customerId: data.customerId, serviceId: data.serviceId, startsAt, endsAt, price: service.price, notes: data.notes || null, status: data.status } });
       await syncAppointmentReminders(tx, membership.barbershopId, id, current);
+      return appointmentPush(await tx.appointment.findUniqueOrThrow({ where: { id } }), current);
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    scheduleMobilePush(prisma, push);
   } catch (error) {
     if (error instanceof Error && error.message === "APPOINTMENT_NOT_FOUND") fail(data.date, "Reserva no encontrada");
     if (error instanceof Error && error.message === "BARBER_SERVICE_INELIGIBLE") fail(data.date, BARBER_SERVICE_MESSAGE);

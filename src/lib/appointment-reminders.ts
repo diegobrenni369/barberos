@@ -1,3 +1,4 @@
+import { appointmentPush, scheduleMobilePush, type PushEvent } from "./mobile-push";
 import { createHash, randomBytes } from "node:crypto";
 import type { Appointment, Prisma, PrismaClient, ReminderType } from "@prisma/client";
 import { normalizeBookingPhone } from "@/lib/public-booking-input";
@@ -64,23 +65,27 @@ export async function findPublicAppointment(tx: Prisma.TransactionClient, slug: 
 }
 
 export async function respondToAppointment(db: PrismaClient, slug: string, token: string, action: "confirm" | "cancel", now?: Date) {
-  return db.$transaction(async tx => {
+  const result = await db.$transaction(async tx => {
     const candidate = await findPublicAppointment(tx, slug, token, now);
-    if (!candidate) return false;
+    if (!candidate) return { ok: false, push: null };
     await lockAppointment(tx, candidate.id, candidate.barbershopId);
     const actionTime = now ?? new Date();
     const a = await findPublicAppointment(tx, slug, token, actionTime);
-    if (!a) return false;
+    if (!a) return { ok: false, push: null };
+    let push: PushEvent | null = null;
     if (action === "confirm") {
       if (a.status !== "CONFIRMED" || !a.customerConfirmedAt) {
         await tx.appointment.update({ where: { id: a.id, barbershopId: a.barbershopId }, data: { status: "CONFIRMED", customerConfirmedAt: a.customerConfirmedAt ?? actionTime } });
       }
     } else {
-      await tx.appointment.update({ where: { id: a.id, barbershopId: a.barbershopId }, data: { status: "CANCELLED" } });
+      const cancelled = await tx.appointment.update({ where: { id: a.id, barbershopId: a.barbershopId }, data: { status: "CANCELLED" } });
+      push = appointmentPush(cancelled, a);
       await syncAppointmentReminders(tx, a.barbershopId, a.id, a, actionTime);
     }
-    return true;
+    return { ok: true, push };
   });
+  scheduleMobilePush(db, result.push);
+  return result.ok;
 }
 
 // Compatibility exports for existing domain callers/tests; providers stay separate.

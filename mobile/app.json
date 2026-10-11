@@ -6,7 +6,24 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "plugins": ["expo-router", "expo-secure-store"],
-    "ios": { "supportsTablet": false }
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-notifications"
+    ],
+    "ios": {
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "com.proyecto309.mobile",
+      "googleServicesFile": "./google-services.json"
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "350f1eed-9419-417e-8b88-613300b64777"
+      }
+    },
+    "owner": "diego2401"
   }
 }
