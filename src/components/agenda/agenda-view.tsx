@@ -133,9 +133,7 @@ export function AgendaView({
               className="sticky top-0 z-30 grid border-b bg-card/95 shadow-[0_1px_0_0_var(--border)] backdrop-blur"
               style={{ width: "100%", gridTemplateColumns: columnTemplate }}
             >
-              <div className="flex h-11 items-center px-3 text-xs font-normal text-muted-foreground">
-                Hora
-              </div>
+              <div className="h-11" />
               {barbers.map((barber) => (
                 <div
                   key={barber.id}
@@ -166,7 +164,7 @@ export function AgendaView({
                     key={minutes}
                     className="absolute"
                     style={{
-                      left: 0,
+                      left: HOUR_COLUMN_WIDTH,
                       right: 0,
                       top:
                         AGENDA_TOP_GUTTER +

@@ -1,3 +1,4 @@
+import { semanticColors } from "@/lib/semantic-colors";
 import Link from "next/link";
 import type { getOperationalDashboard } from "@/lib/operational-dashboard";
 import { utcToZonedParts } from "@/lib/agenda";
@@ -24,7 +25,7 @@ export function DashboardOverview({ data, timezone, currency, now }: { data: Awa
         <Metric label="Atenciones" value={data.counts.completed} hint="Completadas" />
         <Metric label="Ticket promedio" value={money(data.average)} hint="Por venta válida" />
       </dl>
-      <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 border-t border-border pt-3 text-xs text-muted-foreground"><span>Canceladas <strong className="ml-1 font-medium text-foreground">{data.counts.cancelled}</strong></span><span>No asistió <strong className="ml-1 font-medium text-foreground">{data.counts.noShow}</strong></span></div>
+      <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 border-t border-border pt-3 text-xs text-muted-foreground"><span className={semanticColors.red.text}>Canceladas <strong className="ml-1 font-medium">{data.counts.cancelled}</strong></span><span className={semanticColors.amber.text}>No asistió <strong className="ml-1 font-medium">{data.counts.noShow}</strong></span></div>
     </CardContent></Card>
     <div className="grid min-w-0 gap-4 lg:grid-cols-2">
       <Card><CardHeader><CardTitle>Agenda de hoy</CardTitle></CardHeader><CardContent>

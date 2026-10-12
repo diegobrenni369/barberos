@@ -1,3 +1,4 @@
+import { semanticColors } from "../lib/semantic-colors";
 import { Pressable, Text, View } from "react-native";
 import { type AgendaData, type MobileAppointment, type MobileBlock, timeLabel } from "../lib/agenda";
 import { EmptyState, colors, styles } from "./ui";
@@ -8,15 +9,15 @@ import { UnavailablePattern } from "./unavailable-pattern";
 const PIXELS_PER_MINUTE = 2;
 // Match web: inset the visible surface, not the temporal event bounds.
 const EVENT_INSET = 4;
-const borders = { SCHEDULED: "#d5e6fc", CONFIRMED: "#c7eddd", COMPLETED: "#e5e5e5", NO_SHOW: "#f5e6bd", CANCELLED: "#f5d7d7" };
-const indicators = { SCHEDULED: "#3b82f6", CONFIRMED: "#10b981", COMPLETED: "#94a3b8", NO_SHOW: "#d97706", CANCELLED: "#ef4444" };
+const borders = { SCHEDULED: semanticColors.blue.border, CONFIRMED: semanticColors.green.border, COMPLETED: semanticColors.green.border, NO_SHOW: semanticColors.amber.border, CANCELLED: semanticColors.red.border };
+const indicators = { SCHEDULED: semanticColors.blue.indicator, CONFIRMED: semanticColors.green.indicator, COMPLETED: semanticColors.green.indicator, NO_SHOW: semanticColors.amber.indicator, CANCELLED: semanticColors.red.indicator };
 
 export const appointmentAppearance = {
-  SCHEDULED: { label: "Agendada", tone: "blue", background: "#eff6ff" },
-  CONFIRMED: { label: "Confirmada", tone: "green", background: "#ecfdf5" },
-  COMPLETED: { label: "Completada", tone: "neutral", background: "#fafafa" },
-  NO_SHOW: { label: "No asistió", tone: "amber", background: "#fffbeb" },
-  CANCELLED: { label: "Cancelada", tone: "red", background: "#fef2f2" },
+  SCHEDULED: { label: "Agendada", tone: "blue", background: semanticColors.blue.background },
+  CONFIRMED: { label: "Confirmada", tone: "green", background: semanticColors.green.background },
+  COMPLETED: { label: "Completada", tone: "green", background: semanticColors.green.background },
+  NO_SHOW: { label: "No asistió", tone: "amber", background: semanticColors.amber.background },
+  CANCELLED: { label: "Cancelada", tone: "red", background: semanticColors.red.background },
 } as const;
 
 export function AgendaTimeline({ data, timezone, onAppointment, onBlock, onGridLayout }: { data: AgendaData; timezone: string; onAppointment: (item: MobileAppointment) => void; onBlock: (item: MobileBlock) => void; onGridLayout?: (grid: { y: number; start: number; end: number; scale: number }) => void }) {

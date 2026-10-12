@@ -1,35 +1,42 @@
 "use client";
 
+import { semanticColors } from "@/lib/semantic-colors";
+
 import { EVENT_INSET } from "./event-spacing";
 
 import { AppointmentData } from "@/components/agenda/appointment-dialog";
 import { AGENDA_PIXELS_PER_MINUTE, AGENDA_TOP_GUTTER } from "@/lib/agenda";
 
-export const appointmentStatusStyles: Record<string, { label: string; card: string; indicator: string }> = {
+export const appointmentStatusStyles: Record<string, { label: string; card: string; indicator: string; badge: string }> = {
   SCHEDULED: {
     label: "Agendada",
-    card: "border-blue-200/70 bg-blue-50/60 hover:bg-blue-50/80 dark:border-blue-800/50 dark:bg-blue-950/20 dark:hover:bg-blue-950/30",
-    indicator: "bg-blue-500 dark:bg-blue-400",
+    card: `${semanticColors.blue.tint} hover:bg-blue-50/80 dark:hover:bg-blue-950/30`,
+    indicator: semanticColors.blue.indicator,
+    badge: semanticColors.blue.tint + " " + semanticColors.blue.text,
   },
   CONFIRMED: {
     label: "Confirmada",
-    card: "border-emerald-200/70 bg-emerald-50/60 hover:bg-emerald-50/80 dark:border-emerald-800/50 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/30",
-    indicator: "bg-emerald-500 dark:bg-emerald-400",
+    card: `${semanticColors.green.tint} hover:bg-emerald-50/80 dark:hover:bg-emerald-950/30`,
+    indicator: semanticColors.green.indicator,
+    badge: semanticColors.green.tint + " " + semanticColors.green.text,
   },
   COMPLETED: {
     label: "Completada",
-    card: "border-border bg-muted/50 hover:bg-muted/70",
-    indicator: "bg-slate-400 dark:bg-slate-500",
+    card: `${semanticColors.green.tint} hover:bg-emerald-50/80 dark:hover:bg-emerald-950/30`,
+    indicator: semanticColors.green.indicator,
+    badge: semanticColors.green.tint + " " + semanticColors.green.text,
   },
   CANCELLED: {
     label: "Cancelada",
-    card: "border-dashed border-red-200/70 bg-red-50/60 opacity-75 hover:bg-red-50/80 dark:border-red-800/50 dark:bg-red-950/20 dark:hover:bg-red-950/30",
-    indicator: "bg-red-500 dark:bg-red-400",
+    card: `${semanticColors.red.tint} border-dashed opacity-75 hover:bg-red-50/80 dark:hover:bg-red-950/30`,
+    indicator: semanticColors.red.indicator,
+    badge: semanticColors.red.tint + " " + semanticColors.red.text,
   },
   NO_SHOW: {
     label: "No asistió",
-    card: "border-amber-200/70 bg-amber-50/60 hover:bg-amber-50/80 dark:border-amber-800/50 dark:bg-amber-950/20 dark:hover:bg-amber-950/30",
-    indicator: "bg-amber-500 dark:bg-amber-400",
+    card: `${semanticColors.amber.tint} hover:bg-amber-50/80 dark:hover:bg-amber-950/30`,
+    indicator: semanticColors.amber.indicator,
+    badge: semanticColors.amber.tint + " " + semanticColors.amber.text,
   },
 };
 

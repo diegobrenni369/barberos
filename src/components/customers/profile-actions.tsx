@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 
 export function AppointmentStatusBadge({ status }: { status: string }) {
   const style = appointmentStatusStyles[status];
-  return <Badge variant="outline" className="font-normal text-muted-foreground"><span aria-hidden className={`size-1.5 rounded-full ${style?.indicator}`} />{style?.label ?? status}</Badge>;
+  return <Badge variant="outline" className={`font-normal ${style?.badge ?? ""}`}><span aria-hidden className={`size-1.5 rounded-full ${style?.indicator}`} />{style?.label ?? status}</Badge>;
 }
 
 export function CustomerBooking({ customer, barbers, services, date }: { customer: AgendaOption; barbers: AgendaOption[]; services: ServiceOption[]; date: string }) {
