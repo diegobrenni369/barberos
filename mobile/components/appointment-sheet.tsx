@@ -1,3 +1,4 @@
+import { paymentTone } from "../lib/semantic-colors";
 import { useRef, useState } from "react";
 import { Alert, Modal, PanResponder, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -79,7 +80,7 @@ export function AppointmentSheet({ appointment, timezone, onClose, onChanged, on
           {!!appointment.paymentLabel && <View style={{ gap: 8 }}>
             <Text style={[styles.muted, { fontSize: 12, fontWeight: "600" }]}>Pago</Text>
             <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-              <Badge>{appointment.paymentLabel}</Badge>
+              <Badge tone={paymentTone(appointment.paymentLabel)}>{appointment.paymentLabel}</Badge>
               {!!appointment.payment?.methods && <Text style={styles.label}>{appointment.payment.methods}</Text>}
             </View>
             {appointment.payment && <Text style={styles.subtitle}>{new Intl.NumberFormat("es-CL", { style: "currency", currency: appointment.payment.currency }).format(Number(appointment.payment.amount))}</Text>}

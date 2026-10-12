@@ -1,13 +1,15 @@
 import { useState, type ReactNode } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View, type TextInputProps, type ViewProps } from "react-native";
 
-export const colors = { background: "#ffffff", text: "#171717", muted: "#737373", border: "#e5e5e5", soft: "#f5f5f5", error: "#b91c1c" };
+import { semanticColors } from "../lib/semantic-colors";
+
+export const colors = { background: "#ffffff", text: "#171717", muted: "#737373", border: "#e5e5e5", soft: "#f5f5f5", error: semanticColors.red.text };
 export function LoadingIndicator({ accessibilityLabel = "Cargando", inline = false, inverse = false }: { accessibilityLabel?: string; inline?: boolean; inverse?: boolean }) {
   return <View style={{ paddingVertical: inline ? 0 : 24, alignItems: "center", justifyContent: "center" }}><ActivityIndicator size="small" color={inverse ? "white" : colors.text} accessibilityLabel={accessibilityLabel} accessibilityState={{ busy: true }} /></View>;
 }
 export function Button({ title, onPress, disabled, loading, secondary = false, variant, compact = false }: { title: string; onPress: () => void; disabled?: boolean; loading?: boolean; secondary?: boolean; variant?: "ghost" | "destructive"; compact?: boolean }) {
   const foreground = variant === "destructive" ? colors.error : variant === "ghost" ? colors.muted : secondary ? colors.text : "white";
-  return <Pressable accessibilityRole="button" accessibilityState={{ disabled: disabled || loading, busy: loading }} disabled={disabled || loading} onPress={onPress} style={({ pressed }) => [styles.button, secondary && styles.secondary, compact && { minHeight: 44, minWidth: 44, padding: 10 }, variant === "ghost" && { backgroundColor: "transparent", borderWidth: 0 }, variant === "destructive" && { backgroundColor: "#fff7f7", borderWidth: 1, borderColor: "#fee2e2" }, { opacity: disabled || loading ? 0.5 : pressed ? 0.8 : 1 }]}>{loading ? <LoadingIndicator inline inverse={!secondary && !variant} accessibilityLabel={title} /> : <Text style={[styles.buttonText, { color: foreground }]}>{title}</Text>}</Pressable>;
+  return <Pressable accessibilityRole="button" accessibilityState={{ disabled: disabled || loading, busy: loading }} disabled={disabled || loading} onPress={onPress} style={({ pressed }) => [styles.button, secondary && styles.secondary, compact && { minHeight: 44, minWidth: 44, padding: 10 }, variant === "ghost" && { backgroundColor: "transparent", borderWidth: 0 }, variant === "destructive" && { backgroundColor: semanticColors.red.background, borderWidth: 1, borderColor: semanticColors.red.border }, { opacity: disabled || loading ? 0.5 : pressed ? 0.8 : 1 }]}>{loading ? <LoadingIndicator inline inverse={!secondary && !variant} accessibilityLabel={title} /> : <Text style={[styles.buttonText, { color: foreground }]}>{title}</Text>}</Pressable>;
 }
 export function Input({ label, style, ...props }: TextInputProps & { label: string }) {
   const [focused, setFocused] = useState(false);
@@ -15,8 +17,8 @@ export function Input({ label, style, ...props }: TextInputProps & { label: stri
 }
 export function Card({ style, ...props }: ViewProps) { return <View {...props} style={[styles.card, style]} />; }
 export function Badge({ children, tone = "neutral" }: { children: ReactNode; tone?: "neutral" | "blue" | "green" | "red" | "amber" }) {
-  const palette = { neutral: ["#f5f5f5", "#525252"], blue: ["#eff6ff", "#1d4ed8"], green: ["#ecfdf5", "#047857"], red: ["#fef2f2", "#b91c1c"], amber: ["#fffbeb", "#92400e"] }[tone];
-  return <View style={{ alignSelf: "flex-start", backgroundColor: palette[0], borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 }}><Text style={{ color: palette[1], fontSize: 12 }}>{children}</Text></View>;
+  const palette = semanticColors[tone];
+  return <View style={{ alignSelf: "flex-start", backgroundColor: palette.background, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 }}><Text style={{ color: palette.text, fontSize: 12 }}>{children}</Text></View>;
 }
 export function Avatar({ name }: { name: string }) { return <View accessibilityLabel={name} style={styles.avatar}><Text style={styles.label}>{name.trim().split(/\s+/).slice(0, 2).map(word => word[0]).join("").toUpperCase()}</Text></View>; }
 export function Separator() { return <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: colors.border }} />; }

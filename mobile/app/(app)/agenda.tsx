@@ -3,7 +3,7 @@ import { useAgendaScroll } from "../../lib/use-agenda-scroll";
 import { AgendaWeek } from "../../components/agenda-week";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { AppState, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../lib/auth";
 import { useSelectedBarber } from "../../lib/selected-barber";
@@ -25,6 +25,9 @@ export default function Agenda() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);
+  const inFlight = useRef<Promise<void> | null>(null);
+  const loadedKey = useRef<string | null>(null);
+  const refresh = useRef<(() => void) | null>(null);
   const [picker, setPicker] = useState(false);
   const [appointment, setAppointment] = useState<MobileAppointment | null>(null);
   const [createMenu, setCreateMenu] = useState(false);
@@ -60,26 +63,55 @@ export default function Agenda() {
     setData(current => current ? { ...current, appointments: current.appointments.flatMap(item => item.id !== id ? [item] : status === "CANCELLED" ? [] : [{ ...item, status, canChangeStatus: status === "CONFIRMED", canCharge: status === "CONFIRMED" && item.canCharge }]) } : current);
     if (status === "CANCELLED") setAppointment(null);
     else setAppointment(current => current?.id === id ? { ...current, status, canChangeStatus: status === "CONFIRMED", canCharge: status === "CONFIRMED" && current.canCharge } : current);
+    setRetry(value => value + 1);
   }
   useEffect(() => {
     let active = true;
-    setLoading(true); setError("");
-    void get<AgendaData>(`/api/mobile/agenda?date=${date}${barberId ? `&barberId=${encodeURIComponent(barberId)}` : ""}`).then(result => {
-      if (active) {
-        setData(result); if (!barberId) setBarberId(result.barberId);
-        setAppointment(current => {
-          const refreshed = current && result.appointments.find(item => item.id === current.id);
-          return current && refreshed ? { ...current, paymentLabel: refreshed.paymentLabel, payment: refreshed.payment } : current;
-        });
-      }
-    }).catch(failure => {
+    const key = `${date}:${barberId ?? ""}`;
+    async function load(automatic = false) {
+      // Serialize date changes and explicit refetches; coalesce background refreshes.
+      if (automatic && inFlight.current) return;
+      while (inFlight.current) await inFlight.current;
       if (!active) return;
-      if (failure instanceof ApiError && failure.status === 404 && barberId) {
-        setBarberId(null); setData(null);
-      } else setError("No se pudo cargar la agenda.");
-    }).finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
+      const silent = loadedKey.current === key;
+      if (!silent) setLoading(true);
+      setError("");
+      const request = get<AgendaData>(`/api/mobile/agenda?date=${date}${barberId ? `&barberId=${encodeURIComponent(barberId)}` : ""}`).then(result => {
+        if (active) {
+          loadedKey.current = `${date}:${barberId ?? result.barberId}`;
+          setData(result); if (!barberId) setBarberId(result.barberId);
+          setAppointment(current => {
+            const refreshed = current && result.appointments.find(item => item.id === current.id);
+            return current && refreshed ? { ...current, paymentLabel: refreshed.paymentLabel, payment: refreshed.payment } : current;
+          });
+        }
+      }).catch(failure => {
+        if (!active) return;
+        if (failure instanceof ApiError && failure.status === 404 && barberId) {
+          loadedKey.current = null;
+          setBarberId(null); setData(null);
+        } else if (!silent) setError("No se pudo cargar la agenda.");
+      }).finally(() => { if (active) setLoading(false); });
+      inFlight.current = request;
+      await request;
+      if (inFlight.current === request) inFlight.current = null;
+    }
+    refresh.current = () => { void load(true); };
+    void load();
+    return () => { active = false; refresh.current = null; };
   }, [date, barberId, retry, get, setBarberId]);
+  useFocusEffect(useCallback(() => {
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const resume = () => {
+      clearInterval(timer);
+      if (AppState.currentState !== "active") return;
+      refresh.current?.();
+      timer = setInterval(() => refresh.current?.(), 30_000);
+    };
+    resume();
+    const subscription = AppState.addEventListener("change", resume);
+    return () => { clearInterval(timer); subscription.remove(); };
+  }, []));
   const selected = data?.barbers.find(item => item.id === (barberId ?? data.barberId));
   const changeDay = (next: string) => { if (!barberId && data?.barberId) setBarberId(data.barberId); if (next !== date) agendaScroll.requestScroll("restore"); setDate(next); };
   return <SafeAreaView edges={["top", "left", "right"]} style={styles.screen}>

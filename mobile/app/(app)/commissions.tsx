@@ -1,3 +1,4 @@
+import { semanticColors } from "../../lib/semantic-colors";
 import { useCallback, useRef, useState } from "react";
 import { useFocusEffect } from "expo-router";
 import { Alert, FlatList, Pressable, ScrollView, Text, View } from "react-native";
@@ -109,13 +110,13 @@ export default function Commissions() {
         {invalidRange && <Text accessibilityRole="alert" style={styles.error}>La fecha de inicio debe ser anterior o igual al término.</Text>}
         {loading && <LoadingIndicator accessibilityLabel="Cargando comisiones" />}
         {!!error && <><Text accessibilityRole="alert" style={styles.error}>{error}</Text><Button title="Reintentar" secondary onPress={() => setRetry(value => value + 1)} /></>}
-        {!!settlementMessage && <Text accessibilityRole="alert" style={styles.muted}>{settlementMessage}</Text>}
+        {!!settlementMessage && <Text accessibilityRole="alert" style={[styles.muted, { color: semanticColors.green.text }]}>{settlementMessage}</Text>}
         {!!settlementError && <Text accessibilityRole="alert" style={styles.error}>{settlementError}</Text>}
         {report && <>
           <Text style={[styles.muted, { fontSize: 12 }]}>{readableDate(report.from)} – {readableDate(report.to)}</Text>
           <Card><Text style={styles.subtitle}>Resumen</Text><View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 14 }}>{[
             ["Ventas asociadas", report.summary.sales], ["Comisión generada", report.summary.generated], ["Comisión pendiente", report.summary.pending], ["Comisión pagada", report.summary.paid],
-          ].map(([label, value]) => <View key={label} style={{ width: "48%", gap: 4 }}><Text style={[styles.muted, { fontSize: 11 }]}>{label}</Text><Text style={[styles.label, { fontSize: 17, fontWeight: "600", fontVariant: ["tabular-nums"] }]}>{money(value, report.currency)}</Text></View>)}</View></Card>
+          ].map(([label, value]) => <View key={label} style={{ width: "48%", gap: 4 }}><Text style={[styles.muted, { fontSize: 11 }]}>{label}</Text><Text style={[styles.label, { color: label === "Comisión pendiente" ? semanticColors.amber.text : label === "Comisión pagada" ? semanticColors.green.text : colors.text, fontSize: 17, fontWeight: "600", fontVariant: ["tabular-nums"] }]}>{money(value, report.currency)}</Text></View>)}</View></Card>
           <Text style={[styles.muted, { fontSize: 11, lineHeight: 16 }]}>Ventas y pendientes por fecha de venta. Pagada por fecha de liquidación.</Text>
           {owner && !!report.settlement?.count && Number(report.settlement.total) > 0 && <Button title="Marcar como pagadas" secondary loading={settlementBusy} disabled={settlementBusy || loading || invalidRange || report.barber.id !== barberId} onPress={confirmSettlement} />}
           <Text style={styles.subtitle}>Detalle</Text>

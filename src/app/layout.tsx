@@ -17,6 +17,10 @@ export const metadata: Metadata = {
   title: "Tevno",
   description: "Tevno: agenda, reservas y gestión de tu barbería.",
   applicationName: "Tevno",
+  icons: {
+    icon: { url: "/branding/tevno-icon.png", type: "image/png", sizes: "512x512" },
+    shortcut: "/branding/tevno-icon.png",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

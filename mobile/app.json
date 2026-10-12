@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Tevno",
-    "icon": "./assets/branding/icon-1024.png",
+    "icon": "./assets/branding/app-icon-solid.png",
     "slug": "barberos-mobile",
     "scheme": "barberos",
     "version": "0.1.0",
@@ -16,6 +16,10 @@
       "supportsTablet": false
     },
     "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/branding/adaptive-foreground.png",
+        "backgroundColor": "#09090B"
+      },
       "package": "com.proyecto309.mobile",
       "googleServicesFile": "./google-services.json"
     },

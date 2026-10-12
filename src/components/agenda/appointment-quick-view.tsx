@@ -1,4 +1,5 @@
 "use client";
+import { semanticColors, paymentTone } from "@/lib/semantic-colors";
 import { toast } from "sonner";
 
 import { useState, useTransition } from "react";
@@ -11,7 +12,8 @@ import { updateAppointment, restoreAppointment } from "@/app/actions/appointment
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import type { AppointmentData } from "./appointment-dialog";
-import { AppointmentDetails } from "./appointment-details";
+import { calendarDate } from "@/lib/agenda-navigation";
+import { Separator } from "@/components/ui/separator";
 
 export function AppointmentQuickView({ appointment, barberName, onClose, onEdit }: { appointment: AppointmentData; barberName: string; onClose: () => void; onEdit: () => void }) {
   const [pending, startTransition] = useTransition();
@@ -37,9 +39,23 @@ export function AppointmentQuickView({ appointment, barberName, onClose, onEdit 
   }
 
   return <div className="space-y-4 px-5 py-4">
-        <AppointmentDetails appointment={appointment} barberName={barberName} showDate />
+        <div className="space-y-1 text-sm">
+          <p className="break-words text-base font-semibold leading-snug">{appointment.customerName}</p>
+          <p className="break-words text-muted-foreground">{appointment.serviceName}</p>
+        </div>
+        <Separator />
+        <div className="space-y-1 text-sm">
+          <p className="text-xs text-muted-foreground">Fecha y hora</p>
+          <p>{new Intl.DateTimeFormat("es-CL", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(calendarDate(appointment.date))}</p>
+          <p className="tabular-nums font-medium">{appointment.time}–{appointment.endTime}</p>
+        </div>
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 text-sm">
+          <div className="space-y-1"><p className="text-xs text-muted-foreground">Profesional</p><p className="break-words">{barberName}</p></div>
+          <div className="space-y-1 text-right"><p className="text-xs text-muted-foreground">Precio</p><p className="tabular-nums font-medium">{formatMoney(appointment.price, appointment.currency)}</p></div>
+        </div>
+        <Separator />
         {appointment.customerConfirmedAt && <p className="text-xs text-muted-foreground">Cliente confirmó asistencia</p>}
-        {appointment.sale && <p className="text-xs text-muted-foreground">{appointment.sale.paymentLabel}{appointment.sale.method && <> · {paymentMethods[appointment.sale.method]}</>} · {formatMoney(appointment.sale.total, appointment.sale.currency)}</p>}
+        {appointment.sale && <p className="text-xs text-muted-foreground"><span className={semanticColors[paymentTone(appointment.sale.paymentLabel)].text}>{appointment.sale.paymentLabel}</span>{appointment.sale.method && <> · {paymentMethods[appointment.sale.method]}</>} · {formatMoney(appointment.sale.total, appointment.sale.currency)}</p>}
         {appointment.sale && appointment.canCharge && <Button variant="outline" disabled={pending} onClick={() => startTransition(async () => {
           try {
             const detail = await getAppointmentSale(appointment.id);

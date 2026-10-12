@@ -5,12 +5,16 @@ import { useSearchParams } from "next/navigation";
 import { PanelRightClose, PanelRightOpen, SlidersHorizontal, ArrowLeft } from "lucide-react";
 import { AppointmentQuickView } from "./appointment-quick-view";
 import { AgendaView } from "@/components/agenda/agenda-view";
+import { useAgendaRefresh } from "./use-agenda-refresh";
 import { ClosedAgenda } from "@/components/agenda/closed-agenda";
 import { AgendaPanel } from "@/components/agenda/agenda-panel";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { appointmentStatusStyles } from "./appointment-card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "@/components/ui/sheet";
 
 export function AgendaWorkspace({ isClosed, ...props }: ComponentProps<typeof AgendaView> & { isClosed: boolean }) {
+  useAgendaRefresh();
   const [panelOpen, setPanelOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [detail, setDetail] = useState<{ id: string; date: string; onEdit: () => void } | null>(null);
@@ -27,6 +31,8 @@ export function AgendaWorkspace({ isClosed, ...props }: ComponentProps<typeof Ag
     {appointment && <AppointmentQuickView appointment={appointment} barberName={props.barbers.find(barber => barber.id === appointment.barberId)?.name ?? "Barbero"} onClose={closeDetail} onEdit={() => { detail?.onEdit(); closeDetail(); setMobileOpen(false); }} />}
   </>;
   const back = appointment && <Button variant="ghost" size="icon" aria-label="Volver a calendario y filtros" onClick={closeDetail}><ArrowLeft /></Button>;
+  const statusStyle = appointment && (appointmentStatusStyles[appointment.status] ?? appointmentStatusStyles.COMPLETED);
+  const statusBadge = statusStyle && <Badge variant="secondary" className={`ml-auto gap-1.5 font-normal ${statusStyle.badge}`}><span aria-hidden className={`size-1.5 rounded-full ${statusStyle.indicator}`} />{statusStyle.label}</Badge>;
   const controls = <>
     <Button variant="outline" size="icon" className="hidden md:inline-flex" aria-label={showPanel ? "Ocultar panel de agenda" : "Mostrar panel de agenda"} title={showPanel ? "Ocultar panel de agenda" : "Mostrar panel de agenda"} aria-expanded={showPanel} aria-controls={id} onClick={() => { closeDetail(); setPanelOpen(!showPanel); }}>
       {showPanel ? <PanelRightClose /> : <PanelRightOpen />}
@@ -34,7 +40,7 @@ export function AgendaWorkspace({ isClosed, ...props }: ComponentProps<typeof Ag
     <Sheet open={mobileOpen} onOpenChange={open => { setMobileOpen(open); if (!open) closeDetail(); }}>
       <SheetTrigger render={<Button variant="outline" size="icon" className="md:hidden" aria-label="Calendario y filtros de agenda" />}><SlidersHorizontal /></SheetTrigger>
       <SheetContent className="data-[side=right]:w-full data-[side=right]:sm:max-w-sm">
-        <SheetHeader><SheetTitle className="flex items-center gap-2">{back}{appointment ? "Reserva" : "Agenda"}</SheetTitle><SheetDescription>{appointment ? "Detalle y acciones de la reserva" : "Calendario y filtros"}</SheetDescription></SheetHeader>
+        <SheetHeader><SheetTitle className="flex items-center gap-2 pr-6">{back}{appointment ? "Reserva" : "Agenda"}{statusBadge}</SheetTitle><SheetDescription>{appointment ? "Detalle y acciones de la reserva" : "Calendario y filtros"}</SheetDescription></SheetHeader>
         <div className="min-h-0 flex-1 overflow-y-auto pb-6">{content}</div>
       </SheetContent>
     </Sheet>
@@ -48,7 +54,7 @@ export function AgendaWorkspace({ isClosed, ...props }: ComponentProps<typeof Ag
           : <AgendaView {...props} suppressAppointmentHover={Boolean(appointment)} barbers={selected} allBarbers={props.barbers} panelControls={controls} onAppointmentSelect={(item, onEdit) => { setDetail({ id: item.id, date: props.date, onEdit }); if (window.matchMedia("(max-width: 767px)").matches) setMobileOpen(true); }} />}
       </div>
       {showPanel && <aside id={id} aria-label="Panel de agenda" className="z-30 hidden min-h-0 w-[280px] shrink-0 overflow-y-auto border-l bg-sidebar text-sidebar-foreground md:block">
-        <div className="flex items-center gap-2 border-b px-5 py-4 text-sm font-medium">{back}{appointment ? "Reserva" : "Calendario y filtros"}</div>
+        {appointment && <div className="flex items-center gap-2 border-b px-5 py-4 text-sm font-medium">{back}Reserva{statusBadge}</div>}
         {content}
       </aside>}
     </div>

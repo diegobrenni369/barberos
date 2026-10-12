@@ -2,6 +2,8 @@
 import { DatePicker } from "@/components/ui/date-picker";
 
 import { useState } from "react";
+import { Plus } from "lucide-react";
+import { CreateCustomerDialog } from "./create-customer-dialog";
 import {
   createAppointment,
   restoreAppointment,
@@ -90,6 +92,9 @@ export function AppointmentDialog({
     appointment?.serviceId ?? services[0]?.id ?? "",
   );
   const [status, setStatus] = useState(appointment?.status ?? "SCHEDULED");
+  const [creatingCustomer, setCreatingCustomer] = useState(false);
+  const [savedCustomers, setSavedCustomers] = useState<AgendaOption[]>([]);
+  const customerOptions = [...customers.filter(item => !savedCustomers.some(saved => saved.id === item.id)), ...savedCustomers];
   const [time, setTime] = useState(appointment?.time ?? defaults.time);
   const service = services.find((item) => item.id === serviceId);
   const eligibleBarbers = barbers.filter(item => service?.barberIds.includes(item.id));
@@ -104,7 +109,7 @@ export function AppointmentDialog({
     maximumFractionDigits: 0,
   });
   const action = appointment ? updateAppointment : createAppointment;
-  const customerName = customers.find((item) => item.id === customerId)?.name;
+  const customerName = customerOptions.find((item) => item.id === customerId)?.name;
   const barberName = eligibleBarbers.find((item) => item.id === eligibleBarberId)?.name;
   const statusName = statuses.find((item) => item.value === status)?.label;
 
@@ -139,13 +144,14 @@ export function AppointmentDialog({
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {customers.map((item) => (
+                  {customerOptions.map((item) => (
                     <SelectItem key={item.id} value={item.id}>
                       {item.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {!appointment && <Button type="button" variant="ghost" size="sm" className="justify-self-start" onClick={() => setCreatingCustomer(true)}><Plus />Crear cliente nuevo</Button>}
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Servicio">
@@ -275,6 +281,7 @@ export function AppointmentDialog({
             </Button>
           </DialogFooter>
         </form>
+        {creatingCustomer && <CreateCustomerDialog onClose={() => setCreatingCustomer(false)} onCreated={customer => { setSavedCustomers(current => [...current.filter(item => item.id !== customer.id), customer]); setCustomerId(customer.id); setCreatingCustomer(false); }} />}
       </DialogContent>
     </Dialog>
   );
